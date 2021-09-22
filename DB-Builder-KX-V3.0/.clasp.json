@@ -1,0 +1,18 @@
+{
+    "scriptId": "1bIrTAZnH7GRn2fI7qlfVai6AGjTZc9yCHYoA7xbkgJhIAu975efBOuLZ",
+    "rootDir": "/Users/mohamedallam/Documents/CC Systems/DB-Builder-KX-V3.0",
+    "filePushOrder": [
+        "Imp Library.js",
+        "Utilities Toolkit.js",
+        "y-code_Firebase Handler.js",
+        "y-code_Firestore Handler.js",
+        "y-code_Emailing.js",
+        "y-code_Structure - CCOne.js",
+        "y-code_Structure - Confessions.js",
+        "y-code_Structure - Clean Submission.js",
+        "y-code_Structure - Main.js",
+        "y-code_KXDBHandler.js",
+        "y-code_TriggersManager.js",
+        "z-code_Main.js"
+    ]
+}
