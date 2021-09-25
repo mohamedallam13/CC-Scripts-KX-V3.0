@@ -2,95 +2,211 @@
   root.ISMF = factory()
 })(this, function () {
 
-  // Version 1
+  // Version 2
 
   const ISMF = {};
 
+  const DEFAULT_SSID = "";
+  const DEFAULT_RANGES_OPTIONS_ARRAY = [];
+  const DEFAULT_TYPE = "";
+
   var Spreadsheet
-  var Sheet
 
-  function createInterfaceSheetManager(ssid, sheetName) {
-
-    getSheet(ssid, sheetName);
-
+  function init(ssid) {
+    initiateSpreadSheet(ssid);
     const InterfaceSheetManager = {
-
       Spreadsheet: Spreadsheet,
-      Sheet: Sheet,
-      rangesObj: {},
-      aggregateObj: {},
-      clearRangeByType: {},
-      clearRangesArr: [],
-
-      getRangeData: function (param) {
-        if (!param.type) {
-          console.log("No Type is Provided");
-          return
-        }
+      interfaceSheetsObj: {},
+      allObjectifiedValues: {},
+      allClearRanges: [],
+      readInterfaceSheet: function (param) {
         var paramObj = new ParametersObj(param);
-        var rangeObj = ISMFMethods[paramObj.type](paramObj, this);
-        Object.assign(this.aggregateObj, rangeObj);
-        var rangeName = paramObj.rangeName || generateRangeName(this.rangesObj, paramObj.type);
-        addToRangesObj(rangeObj, paramObj.type, rangeName, this);
+        var Sheet = this.Spreadsheet.getSheetByName(paramObj.sheetName);
+        var ismObj = new InterfaceSheetObj(Sheet, paramObj);
+        this.interfaceSheetsObj[paramObj.sheetName] = ismObj;
+        Object.assign(this.allObjectifiedValues, ismObj.allObjectifiedValues);
+        this.allClearRanges = this.allClearRanges.concat(ismObj.allClearRanges);
         return this;
       },
-      clearRangeByType: function (type) {
-        if (this.clearRangeByType[type]) {
-          this.clearRangeByType[type].forEach(range => {
-            range.clearContent();
-          })
-        }
-        return this;
-      },
-      clearAllRanges: function () {
-        this.clearRangesArr.forEach(range => {
-          range.clearContent();
-        })
+      clearAllRangesInSS: function () {
+        clearAllRanges(this.allClearRanges)
         return this;
       }
-    }
+    };
+    return InterfaceSheetManager;
+  }
 
-    var ISMFMethods = {
-      verticalRanges: function (paramObj, ismObj) {
-        var rangeObj = {};
-        var transposedArray = transpose(paramObj.values);
-        var usersHeader = transposedArray.shift();
-        var header = transposedArray.shift();
-        if (paramObj.clearPref) {
-          var clearPrefArr = transposedArray.shift();
-          getVerticalClearRanges(clearPrefArr, paramObj.startRow, paramObj.startCol, ismObj)
-        }
-        var valuesArr = transposedArray[transposedArray.length - 1];
-        valuesArr.forEach((col, j) => {
-          if(col == ""){
-            return;
-          }
-          rangeObj[header[j]] = {};
-          rangeObj[header[j]].userHeader = usersHeader[j];
-          rangeObj[header[j]].value = col
-          rangeObj[header[j]].rowInSheet = paramObj.startRow + j;
+  function initiateSpreadSheet(ssid) {
+    SpreadsheetApp.flush();
+    ssid = ssid || DEFAULT_SSID;
+    Spreadsheet = SpreadsheetApp.openById(ssid);
+  }
+
+  function ParametersObj(param) {
+    var self = this;
+    this.sheetName = param.sheetName;
+    this.Sheet = Spreadsheet.getSheetByName(param.sheetName);
+    var rangesOptionsArray = param.rangesOptionsArray || DEFAULT_RANGES_OPTIONS_ARRAY;
+    this.rangesOptionsArray = rangesOptionsArray.map(rngParam => new RangeOptionsObj(rngParam, self.Sheet));
+  }
+
+  function RangeOptionsObj(rngParam, Sheet) {
+    var self = this;
+    this.type = DEFAULT_TYPE;
+    this.cols = 1;
+    this.rows = Sheet.getLastRow();
+    Object.assign(this, rngParam);
+    if (this.definedRangeName) {
+      this.defaultRange = Sheet.getRange(this.definedRangeName);
+      this.startRow = defaultRange.getRow();
+      this.startCol = defaultRange.getColumn();
+    }
+    this.defaultRange = Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
+    this.value = this.defaultRange.getValue();
+    this.values = this.defaultRange.getValues();
+  }
+
+  function InterfaceSheetObj(Sheet, paramObj) {
+    var self = this;
+    this.Sheet = Sheet;
+    this.rangesObj = {};
+    this.allObjectifiedValues = {};
+    this.allClearRanges = [];
+    this.clearSheet = function () {
+      clearAllRanges(self.allClearRanges)
+      return self;
+    }
+    paramObj.rangesOptionsArray.forEach((rangeOptions, i) => {
+      if (!rangeOptions.type) {
+        console.log("No type for range: " + Sheet.getName() + " Range " + i + 1);
+        return
+      }
+      var rangeObj = new ISMFMethods[rangeOptions.type](rangeOptions, Sheet);
+      var rangeName = rangeOptions.rangeName || generateRangeName(this.rangesObj, rangeOptions.type);
+      self.rangesObj[rangeName] = rangeObj;
+      Object.assign(self.allObjectifiedValues, rangeObj.objectifiedValues);
+      self.allClearRanges = self.allClearRanges.concat(rangeObj.clearRanges);
+    })
+  }
+
+
+  var ISMFMethods = {
+    VerticalRange: function (rangeOptions, Sheet) {
+      this.rangeRepeats = 1;
+      Object.assign(this, rangeOptions);
+      var self = this;
+      var transposedArray = transpose(rangeOptions.values);
+      var clearPrefArr = this.clearPref ? transposedArray.shift() : [];
+      var rangesListAnn = [];
+      this.rangeRepeat = this.indexOn ? this.rangeRepeats : 1;
+      this.valuesColOffset = transposedArray.length - this.rangeRepeats;
+      this.userHeader = transposedArray.shift();
+      this.header = transposedArray.shift();
+      this.values = transposedArray.slice(transposedArray.length - this.rangeRepeats);
+      this.clearRanges = [];
+      this.rangeVariablesObjArr = getVerticalRangeObjByHeader();
+      this.objectifiedValues = new AutoIndexedValues();
+      this.indexedValues = [];
+      this.rangeList = Sheet.getRangeList(rangesListAnn);
+      this.clearRange = function () {
+        self.rangeList.clearContent();
+        return this;
+      }
+      this.setRange = function () {
+
+      }
+      this.indexValues = function () {
+        self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr);
+      }
+      function getVerticalRangeObjByHeader() {
+        var rangeVariablesObjArr = [];
+        self.values.forEach((row, i) => {
+          var obj = {};
+          row.forEach((col, j) => {
+            if (col == "") {
+              return;
+            }
+            var rangeVariablesObj = new RangeVariablesObj(col, i, j);
+            Object.assign(obj, rangeVariablesObj);
+          })
+          rangeVariablesObjArr.push(obj);
         })
-        return rangeObj;
-      },
-      onTopRanges: function (paramObj, ismObj) {
-        var rangeObj = {};
-        var values = paramObj.values;
-        values.forEach((row, i, arr) => {
-          if (row[0] == "header") {
-            rangeObj[row[1]] = {};
-            rangeObj[row[1]].userHeader = row[2];
-            rangeObj[row[1]].value = arr[i + 1][1];
-            var range = Sheet.getRange(paramObj.startRow + i, paramObj.startCol);
-            ismObj.clearRangesArr.push(range);
-            addToClearRangesByType(range, paramObj.type, ismObj);
+
+        function RangeVariablesObj(col, i, j) {
+          var rowInSheet = self.startRow + j;
+          var colInSheet = self.startCol + self.valuesColOffset + i;
+          var rangeInSheet = Sheet.getRange(rowInSheet, colInSheet);
+          var annotation = rangeInSheet.getA1Notation();
+          var header = self.header;
+          rangesListAnn.push(annotation);
+          var rowClearPref = clearPrefArr[j];
+          if (!rowClearPref || rowClearPref == "") {
+            self.clearRanges.push(rangeInSheet);
           }
+          this[header[j]] = {};
+          this[header[j]].userHeader = self.userHeader[j];
+          this[header[j]].value = col
+          this[header[j]].rowInSheet = rowInSheet;
+          this[header[j]].rangeInSheet = rangeInSheet;
+        };
+        return rangeVariablesObjArr;
+      }
+
+      function AutoIndexedValues() {
+        var indexObj = this;
+        self.rangeVariablesObjArr.forEach(rangeVariables => {
+          var indexingValue = self.indexOn ? rangeVariables[self.indexOn].value + "_" : "";
+          Object.keys(rangeVariables).forEach(key => {
+            indexObj[indexingValue + key] = rangeVariables[key];
+          })
         })
-        return rangeObj;
-      },
-      skipRanges: function (paramObj, ismObj) {
-        var rangeObj = {};
-        var values = paramObj.values;
-        var skip = paramObj.skip;
+      }
+
+    },
+    OnTopRange: function (rangeOptions, Sheet) {
+      Object.assign(this, rangeOptions);
+      var self = this;
+      var rangesListAnn = [];
+      this.clearRanges = [];
+      this.objectifiedValues = new OnTopRangeObjValues();
+      this.rangeList = Sheet.getRangeList(rangesListAnn);
+      this.clearRange = function () {
+        self.rangeList.clearContent();
+        return self;
+      }
+      function OnTopRangeObjValues() {
+        var onTopObj = this;
+        self.values.forEach((row, i, arr) => {
+          if (row[0] != "header" || arr[i + 1][1] == "") {
+            return
+          }
+          var rangeInSheet = Sheet.getRange(self.startRow + i + 1, self.startCol + 1);
+          self.clearRanges.push(rangeInSheet);
+          var annotation = rangeInSheet.getA1Notation();
+          rangesListAnn.push(annotation);
+          onTopObj[row[1]] = {};
+          onTopObj[row[1]].userHeader = row[2];
+          onTopObj[row[1]].value = arr[i + 1][1];
+
+        })
+      }
+
+    },
+    SkipRange: function (rangeOptions, Sheet) {
+      Object.assign(this, rangeOptions);
+      var self = this;
+      var rangesListAnn = [];
+      this.clearRanges = [];
+      this.objectifiedValues = new SkipRangeObjValues();
+      this.rangeList = Sheet.getRangeList(rangesListAnn);
+      this.clearRange = function () {
+        rangeList.clearContent();
+        return self;
+      }
+      function SkipRangeObjValues() {
+        var skipRangeObj = this;
+        var values = self.values;
+        var skip = self.skip;
         var lengthOfValues = values.length;
         var counter;
         var key;
@@ -98,121 +214,110 @@
           if (i % skip == 0) {
             counter = 0;
             var key = values[i][0];
-            rangeObj[key] = {};
-            rangeObj[key].userHeader = values[i][1];
+            skipRangeObj[key] = {};
+            skipRangeObj[key].userHeader = values[i][1];
             counter++
           } else if (counter == 1) {
-            rangeObj[key].value = values[i][0];
-            var range = Sheet.getRange(paramObj.startRow + i, paramObj.startcol);
-            ismObj.clearRangesArr.push(range);
-            addToClearRangesByType(range, paramObj.type, ismObj);
+            skipRangeObj[key].value = values[i][0];
+            var rangeInSheet = Sheet.getRange(self.startRow + i, self.startcol);
+            self.clearRanges.push(rangeInSheet);
+            var annotation = rangeInSheet.getA1Notation();
+            rangesListAnn.push(annotation);
             counter = 0;
           }
         }
-        return rangeObj;
-      },
-      listRanges: function (paramObj, ismObj) {
-        var rangeObj = {};
-        var values = paramObj.values;
-        var headerRow = values.shift()
+      }
+    },
+    ListRange: function (rangeOptions, Sheet) {
+      Object.assign(this, rangeOptions);
+      var self = this;
+      var rangesListAnn = [];
+      this.clearRanges = [];
+      this.objectifiedValues = new ListRangeObjValues();
+      this.rangeList = Sheet.getRangeList(rangesListAnn);
+      this.clearRange = function () {
+        self.rangeList.clearContent();
+        return self;
+      }
+      function ListRangeObjValues() {
+        var values = self.values;
+        var headerRow = self.values.shift()
         var userHeader = headerRow[0];
         var header = headerRow[1];
         var listArray = values.map(row => {
           return row[0];
-        })
-        rangeObj[header] = {}
-        rangeObj[header].userHeader = userHeader
-        rangeObj[header].value = listArray;
-        var range = Sheet.getRange(paramObj.startRow + 1, paramObj.startCol, paramObj.rows - 1, 1);
-        ismObj.clearRangesArr.push(range);
-        addToClearRangesByType(range, paramObj.type, ismObj);
-        return rangeObj;
-      },
-      definedRanges: function (paramObj, ismObj) {
-        var rangeObj = {};
-        rangeObj.value = paramObj.value;
-        rangeObj.userHeader = paramObj.userHeader;
-        addToClearRangesByType(paramObj.range, paramObj.type, ismObj)
-        return rangeObj;
-      }
-    }
-
-    function getSheet(ssid, sheetName) {
-      Spreadsheet = SpreadsheetApp.openById(ssid)
-      Sheet = Spreadsheet.getSheetByName(sheetName)
-    }
-
-    function ParametersObj(param) {
-      var range;
-      this.type = param.type;
-      if (param.definedRangeName) {
-        this.definedRangeName = definedRangeName;
-        range = Sheet.getRange(param.definedRangeName);
-        this.startRow = range.getRow();
-        this.startCol = range.getColumn();
-      } else {
-        this.startRow = param.startRow;
-        this.startCol = param.startCol;
-      }
-      this.cols = param.cols || 1;
-      this.rows = param.rows || Sheet.getLastRow();
-      this.rangeName = param.rangeName;
-      this.clearDef = param.clearDef;
-      this.outputRange = param.outputRange;
-      this.range = range || Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
-      this.value = this.range.getValue();
-      this.values = this.range.getValues();
-    }
-
-    function transpose(matrix) {
-      return matrix[0].map((col, i) => matrix.map(row => row[i]));
-    }
-
-    function getVerticalClearRanges(clearPrefArr, startRow, startCol, ismObj) {
-      clearPrefArr.forEach((row, i) => {
-        if (row != "def") {
+        }).filter(row => row != "");
+        if (listArray.length == 0) {
           return;
         }
-        var rowInd = startRow + i;
-        var col = startCol + 2;
-        var range = Sheet.getRange(rowInd, col)
-        ismObj.clearRangesArr.push(range);
-        addToClearRangesByType(range, type, ismObj);
-      })
-    }
-
-    function addToClearRangesByType(range, type, ismObj) {
-      if (!ismObj.clearRangeByType[type]) {
-        ismObj.clearRangeByType[type] = [];
+        var rangeInSheet = Sheet.getRange(self.startRow + 1, self.startCol, self.rows - 1, 1);
+        self.clearRanges.push(rangeInSheet);
+        var annotation = rangeInSheet.getA1Notation();
+        rangesListAnn.push(annotation);
+        this[header] = {}
+        this[header].userHeader = userHeader
+        this[header].value = listArray;
       }
-      ismObj.clearRangeByType[type].push(range);
-    }
+    },
 
-    function addToRangesObj(rangeObj, type, rangeName, ismObj) {
-      if (!ismObj.rangesObj[type]) {
-        ismObj.rangesObj[type] = {};
+    DefinedRange: function (rangeOptions, Sheet) {
+      if(rangeOptions.value == ""){
+        return;
       }
-      ismObj.rangesObj[type][rangeName] = rangeObj
-    }
-
-    function generateRangeName(rangesObj, rangeType) {
-      var rangeTypeRanges = rangesObj[rangeType];
-      if (!rangeTypeRanges) {
-        return rangeType + "_1"
+      Object.assign(this, rangeOptions);
+      var self = this;
+      this.clearRanges = [self.defaultRange];
+      this.objectifiedValues = new DefinedRangeObj();
+      this.clearRange = function () {
+        self.defaultRange.clearContent();
+        return self;
       }
-      var rangeNames = Object.keys(rangeTypeRanges);
-      var pattern = /_[0-9]+/
-      var rangesWithCount = rangeNames.filter(rangeName => {
-        return pattern.test(rangeName);
-      })
-      var rangeCount = parseInt(rangesWithCount.slice(-1)[0].split("_")[1]) + 1;
-      return rangeType + rangeCount;
+      function DefinedRangeObj() {
+        this[definedRangeName] = {};
+        this[definedRangeName].userHeader = definedRangeName;
+        this[definedRangeName].value = self.value;
+      }
     }
-
-    return InterfaceSheetManager;
   }
 
-  ISMF.createInterfaceSheetManager = createInterfaceSheetManager;
+  function transpose(matrix) {
+    return matrix[0].map((col, i) => matrix.map(row => row[i]));
+  }
+
+  function IndexedObjectifiedValues(objectifiedValues, indexOn) {
+    var self = this;
+    objectifiedValues.forEach(variablesObj => {
+      var indexingValue = variablesObj[indexOn].value;
+      if (!indexingValue) {
+        return;
+      }
+      self[indexingValue] = variablesObj;
+    })
+  }
+
+  function clearAllRanges(clearRangesArr) {
+    clearRangesArr.forEach(range => {
+      range.clearContent();
+    })
+  }
+
+  function generateRangeName(rangesObj, rangeType) {
+    var rangeTypeRanges = rangesObj[rangeType];
+    if (!rangeTypeRanges) {
+      return rangeType + "_1"
+    }
+    var rangeNames = Object.keys(rangeTypeRanges);
+    var pattern = /_[0-9]+/
+    var rangesWithCount = rangeNames.filter(rangeName => {
+      return pattern.test(rangeName);
+    })
+    var rangeCount = parseInt(rangesWithCount.slice(-1)[0].split("_")[1]) + 1;
+    return rangeType + rangeCount;
+  }
+
+
+
+  ISMF.init = init;
 
   return ISMF
 })
@@ -220,13 +325,36 @@
 function testGetValuesFromSheetMSM() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var ssid = ss.getId();
-  var sheetName = ss.getActiveSheet().getName();
-  var msm = montagSM(ssid, sheetName);
-  var rangeBParameters = {
-    startRow: 5,
-    startCol: 1,
-    cols: 2
+  // var sheetName = ss.getActiveSheet().getName();
+  const INTROS_SHEETNAME = "Introductions & Visions";
+  var param = {
+    sheetName: INTROS_SHEETNAME,
+    rangesOptionsArray: [
+      {
+        rangeName: "introsRangeParam",
+        type: "OnTopRange",
+        startRow: 5,
+        startCol: 1,
+        cols: 3
+      },
+      {
+        rangeName: "visionsRangeParam",
+        type: "OnTopRange",
+        startRow: 5,
+        startCol: 7,
+        cols: 3
+      },
+      {
+        rangeName: "otherInfoRangeParam",
+        type: "VerticalRange",
+        startRow: 5,
+        startCol: 14,
+        cols: 3
+      }
+    ]
   }
-  msm.getOnTopRangeRange(rangeBParameters);
-  var z
+
+  var ismObj = ISMF.init(ssid).readInterfaceSheet(param);
+  var introSheetInterface = ismObj.interfaceSheetsObj[INTROS_SHEETNAME];
+  introSheetInterface.clearSheet();
 }

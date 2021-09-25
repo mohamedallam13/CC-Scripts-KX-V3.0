@@ -12,24 +12,24 @@
   const ALL_INPUTS_SOURCES_ARRAY = [
     {
       sheetName: INTROS_SHEETNAME,
-      ranges: [
+      rangesOptionsArray: [
         {
           rangeName: "introsRangeParam",
-          type: "onTopRanges",
+          type: "OnTopRange",
           startRow: 5,
           startCol: 1,
           cols: 3
         },
         {
           rangeName: "visionsRangeParam",
-          type: "onTopRanges",
+          type: "OnTopRange",
           startRow: 5,
           startCol: 7,
           cols: 3
         },
         {
           rangeName: "otherInfoRangeParam",
-          type: "verticalRanges",
+          type: "VerticalRange",
           startRow: 5,
           startCol: 14,
           cols: 3
@@ -38,17 +38,17 @@
     },
     {
       sheetName: PLATFORMDATA_SHEETNAME,
-      ranges: [
+      rangesOptionsArray: [
         {
           rangeName: "facebookInfoRange",
-          type: "verticalRanges",
+          type: "VerticalRange",
           startRow: 5,
           startCol: 1,
           cols: 3
         },
         {
           rangeName: "instagramInfoRange",
-          type: "verticalRanges",
+          type: "VerticalRange",
           startRow: 5,
           startCol: 5,
           cols: 3
@@ -57,10 +57,10 @@
     },
     {
       sheetName: EXPORT_SHEETNAME,
-      ranges: [
+      rangesOptionsArray: [
         {
           rangeName: "emailInfoRange",
-          type: "verticalRanges",
+          type: "VerticalRange",
           startRow: 5,
           startCol: 2,
           cols: 3,
@@ -68,7 +68,7 @@
         },
         {
           rangeName: "emailsListRange",
-          type: "listRanges",
+          type: "ListRange",
           startRow: 8,
           startCol: 2,
           cols: 2,
@@ -76,7 +76,7 @@
         },
         {
           rangeName: "emailsBodyRange",
-          type: "onTopRanges",
+          type: "OnTopRange",
           startRow: 14,
           startCol: 1,
           cols: 3
@@ -87,13 +87,12 @@
 
   function extractAllInputs() {
     var inputsObj = {};
-    ALL_INPUTS_SOURCES_ARRAY.forEach(sheetInfoObj => {
-      var ismObj = ISMF.createInterfaceSheetManager(SSID, sheetInfoObj.sheetName);
-      sheetInfoObj.ranges.forEach(rangeParam => {
-        ismObj.getRangeData(rangeParam);
-      });
-      sheetInfoObj.ismObj = ismObj;
-      Object.assign(inputsObj, sheetInfoObj.ismObj.aggregateObj);
+    var ismObj = ISMF.init(SSID);
+    ALL_INPUTS_SOURCES_ARRAY.forEach(rangeParam => {
+      var allObjectifiedValues = ismObj.readInterfaceSheet(rangeParam).allObjectifiedValues;
+      var introSheetInterface = ismObj.interfaceSheetsObj[rangeParam.sheetName];
+      introSheetInterface.clearSheet();
+      Object.assign(inputsObj, allObjectifiedValues);
     })
     return inputsObj;
   }
@@ -104,5 +103,4 @@
 
 function testExtractAll() {
   var inputsObj = SHEETS_MANAGER.extractAllInputs();
-  var t
 }
