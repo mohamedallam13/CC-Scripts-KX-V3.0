@@ -30,8 +30,8 @@
     var spreadSheetObj = {
       Spreadsheet: SpreadsheetApp.openById(ssid),
       sheetsObject: {},
-      readSourcesSheet: function (sheetName) {
-        rangesOptionsArray = rangesOptionsArray || DEFAULT_RANGES_OPTIONS_ARRAY;
+      readSourcesSheet: function (sheetName, rangesArray) {
+        rangesOptionsArray = rangesArray || DEFAULT_RANGES_OPTIONS_ARRAY;
         divider = divider || DEFAULT_DIVIDER
         var Sheet = this.Spreadsheet.getSheetByName(sheetName);
         var dataRegionValues = Sheet.getDataRange().getValues();

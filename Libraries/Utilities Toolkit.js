@@ -155,6 +155,10 @@
         }
     }
 
+    function transpose(matrix) {
+        return matrix[0].map((col, i) => matrix.map(row => row[i]));
+    }
+
     function writeToSheet(writeArr, ssid, sheetName, startRow, startCol) {
         var sheet = SpreadsheetApp.openById(ssid).getSheetByName(sheetName);
         var range = sheet.getRange(startRow, startCol, writeArr.length, writeArr[0].length);
@@ -173,6 +177,7 @@
     Toolkit.timestampCreate = timestampCreate;
     Toolkit.toTitleCase = toTitleCase;
     Toolkit.refitProperMobileNumber = refitProperMobileNumber;
+    Toolkit.transpose = transpose;
     Toolkit.writeToSheet = writeToSheet;
 
     return Toolkit;
