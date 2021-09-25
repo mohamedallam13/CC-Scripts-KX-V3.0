@@ -48,13 +48,13 @@
     this.rows = Sheet.getLastRow();
     Object(this, rngParam);
     if (this.definedRangeName) {
-      this.range = Sheet.getRange(this.definedRangeName);
-      this.startRow = range.getRow();
-      this.startCol = range.getColumn();
+      this.defaultRange = Sheet.getRange(this.definedRangeName);
+      this.startRow = defaultRange.getRow();
+      this.startCol = defaultRange.getColumn();
     }
-    this.range = Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
-    this.value = this.range.getValue();
-    this.values = this.range.getValues();
+    this.defaultRange = Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
+    this.value = this.defaultRange.getValue();
+    this.values = this.defaultRange.getValues();
   }
 
   function InterfaceSheetObj(Sheet, paramObj, ismObj) {
@@ -110,7 +110,7 @@
 
     var ISMFMethods = {
       VerticalRange: function (rangeOptions, ismObj) {
-        Object.assign(this, rangeOptions)
+        Object.assign(this, rangeOptions);
         var transposedArray = transpose(rangeOptions.values);
         this.usersHeader = transposedArray.shift();
         this.header = transposedArray.shift();
@@ -137,25 +137,30 @@
             this[header[j]].rowInSheet = startRow + j;
           })
         }
-        return rangeObj;
       },
-      OnTopRange: function (paramObj, ismObj) {
-        var rangeObj = {};
-        var values = paramObj.values;
-        values.forEach((row, i, arr) => {
-          if (row[0] == "header") {
-            rangeObj[row[1]] = {};
-            rangeObj[row[1]].userHeader = row[2];
-            rangeObj[row[1]].value = arr[i + 1][1];
-            var range = Sheet.getRange(paramObj.startRow + i, paramObj.startCol);
-            ismObj.clearRangesArr.push(range);
-            addToClearRangesByType(range, paramObj.type, ismObj);
-          }
-        })
-        return rangeObj;
+      OnTopRange: function (rangeOptions, ismObj) {
+        Object.assign(this, rangeOptions);
+        this.objectifiedValues = new OnTopRangeObjValues(this.values, this.startRow, this.startCol);
+
+        this.OnTopRangeObjValues = function (values) {
+          values.forEach((row, i, arr) => {
+            if (row[0] == "header") {
+              this[row[1]] = {};
+              this[row[1]].userHeader = row[2];
+              this[row[1]].value = arr[i + 1][1];
+
+
+              var range = Sheet.getRange(paramObj.startRow + i, paramObj.startCol);
+              ismObj.clearRangesArr.push(range);
+              addToClearRangesByType(range, paramObj.type, ismObj);
+
+            }
+          })
+        }
+
       },
-      SkipRange: function (paramObj, ismObj) {
-        var rangeObj = {};
+      SkipRange: function (rangeOptions, ismObj) {
+        Object.assign(this, rangeOptions);
         var values = paramObj.values;
         var skip = paramObj.skip;
         var lengthOfValues = values.length;
@@ -178,12 +183,12 @@
         }
         return rangeObj;
       },
-      ListRange: function (paramObj, ismObj) {
-        var rangeObj = {};
+      ListRange: function (rangeOptions, ismObj) {
+        Object.assign(this, rangeOptions);
         var values = paramObj.values;
-        var headerRow = values.shift()
-        var userHeader = headerRow[0];
-        var header = headerRow[1];
+        var headerRow = this.values.shift()
+        this.userHeader = headerRow[0];
+        this.header = headerRow[1];
         var listArray = values.map(row => {
           return row[0];
         })
@@ -195,10 +200,9 @@
         addToClearRangesByType(range, paramObj.type, ismObj);
         return rangeObj;
       },
-      DefinedRange: function (paramObj, ismObj) {
-        var rangeObj = {};
-        rangeObj.value = paramObj.value;
-        rangeObj.userHeader = paramObj.userHeader;
+      DefinedRange: function (rangeOptions, ismObj) {
+        Object.assign(this, rangeOptions);
+
         addToClearRangesByType(paramObj.range, paramObj.type, ismObj)
         return rangeObj;
       }
