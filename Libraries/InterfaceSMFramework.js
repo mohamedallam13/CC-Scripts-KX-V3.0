@@ -42,18 +42,20 @@
     Spreadsheet = SpreadsheetApp.openById(ssid);
   }
 
-  function ParametersObj(Spreadsheet, param) {
+  function ParametersObj(param) {
+    var self = this;
     this.sheetName = param.sheetName;
     this.Sheet = Spreadsheet.getSheetByName(param.sheetName);
     var rangesOptionsArray = param.rangesOptionsArray || DEFAULT_RANGES_OPTIONS_ARRAY;
-    this.rangesOptionsArray = rangesOptionsArray.map(rngParam => new RangeOptionsObj(rngParam, Sheet));
+    this.rangesOptionsArray = rangesOptionsArray.map(rngParam => new RangeOptionsObj(rngParam, self.Sheet));
   }
 
   function RangeOptionsObj(rngParam, Sheet) {
+    var self = this;
     this.type = DEFAULT_TYPE;
     this.cols = 1;
     this.rows = Sheet.getLastRow();
-    Object(this, rngParam);
+    Object.assign(this, rngParam);
     if (this.definedRangeName) {
       this.defaultRange = Sheet.getRange(this.definedRangeName);
       this.startRow = defaultRange.getRow();
@@ -79,8 +81,8 @@
         console.log("No type for range: " + Sheet.getName() + " Range " + i + 1);
         return
       }
-      var rangeObj = ISMFMethods[rangeOptions.type](rangeOptions, Sheet);
-      var rangeName = paramObj.rangeName || generateRangeName(this.rangesObj, rangeOptions.type);
+      var rangeObj = new ISMFMethods[rangeOptions.type](rangeOptions, Sheet);
+      var rangeName = rangeOptions.rangeName || generateRangeName(this.rangesObj, rangeOptions.type);
       self.rangesObj[rangeName] = rangeObj;
       Object.assign(self.allObjectifiedValues, rangeObj.objectifiedValues);
       self.allClearRanges = self.allClearRanges.concat(rangeObj.clearRanges);
@@ -98,11 +100,11 @@
       var rangesListAnn = [];
       this.rangeRepeat = this.indexOn ? this.rangeRepeats : 1;
       this.valuesColOffset = transposedArray.length - this.rangeRepeats;
-      this.usersHeader = transposedArray.shift();
+      this.userHeader = transposedArray.shift();
       this.header = transposedArray.shift();
       this.values = transposedArray.slice(transposedArray.length - this.rangeRepeats);
       this.clearRanges = [];
-      this.rangeVariablesObjArr = new VerticalRangeObjByHeader();
+      this.rangeVariablesObjArr = getVerticalRangeObjByHeader();
       this.objectifiedValues = new AutoIndexedValues();
       this.indexedValues = [];
       this.rangeList = Sheet.getRangeList(rangesListAnn);
@@ -113,28 +115,35 @@
       this.setRange = function () {
 
       }
-      this.indexValues = function () {
-        self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr);
+      this.indexValues = function (indexOn) {
+        self.indexOn = self.indexOn ? self.indexOn : indexOn;
+        if (!self.indexOn) {
+          console.log("No indexing paramter provided");
+          return;
+        }
+        self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr, self.indexOn);
       }
-      function VerticalRangeObjByHeader() {
+      function getVerticalRangeObjByHeader() {
         var rangeVariablesObjArr = [];
         self.values.forEach((row, i) => {
+          var obj = {};
           row.forEach((col, j) => {
             if (col == "") {
               return;
             }
-            var rangeVariablesObj = new RangeVariablesObj(row, col, i, j);
-            rangeVariablesObjArr.push(rangeVariablesObj)
+            var rangeVariablesObj = new RangeVariablesObj(col, i, j);
+            Object.assign(obj, rangeVariablesObj);
           })
+          rangeVariablesObjArr.push(obj);
         })
 
         function RangeVariablesObj(col, i, j) {
           var rowInSheet = self.startRow + j;
-          var colInSheet = self.startCol + self.valuesOffset + i;
+          var colInSheet = self.startCol + self.valuesColOffset + i;
           var rangeInSheet = Sheet.getRange(rowInSheet, colInSheet);
           var annotation = rangeInSheet.getA1Notation();
           var header = self.header;
-          self.rangesListAnn.push(annotation);
+          rangesListAnn.push(annotation);
           var rowClearPref = clearPrefArr[j];
           if (!rowClearPref || rowClearPref == "") {
             self.clearRanges.push(rangeInSheet);
@@ -145,6 +154,7 @@
           this[header[j]].rowInSheet = rowInSheet;
           this[header[j]].rangeInSheet = rangeInSheet;
         };
+        return rangeVariablesObjArr;
       }
 
       function AutoIndexedValues() {
@@ -158,7 +168,7 @@
       }
 
     },
-    OnTopRange: function (rangeOptions) {
+    OnTopRange: function (rangeOptions, Sheet) {
       Object.assign(this, rangeOptions);
       var self = this;
       var rangesListAnn = [];
@@ -172,10 +182,10 @@
       function OnTopRangeObjValues() {
         var onTopObj = this;
         self.values.forEach((row, i, arr) => {
-          if (row[0] != "header") {
+          if (row[0] != "header" || arr[i + 1][1] == "") {
             return
           }
-          var rangeInSheet = Sheet.getRange(self.startRow + i, self.startCol);
+          var rangeInSheet = Sheet.getRange(self.startRow + i + 1, self.startCol + 1);
           self.clearRanges.push(rangeInSheet);
           var annotation = rangeInSheet.getA1Notation();
           rangesListAnn.push(annotation);
@@ -187,7 +197,7 @@
       }
 
     },
-    SkipRange: function (rangeOptions) {
+    SkipRange: function (rangeOptions, Sheet) {
       Object.assign(this, rangeOptions);
       var self = this;
       var rangesListAnn = [];
@@ -223,7 +233,7 @@
         }
       }
     },
-    ListRange: function (rangeOptions) {
+    ListRange: function (rangeOptions, Sheet) {
       Object.assign(this, rangeOptions);
       var self = this;
       var rangesListAnn = [];
@@ -241,7 +251,10 @@
         var header = headerRow[1];
         var listArray = values.map(row => {
           return row[0];
-        })
+        }).filter(row => row != "");
+        if (listArray.length == 0) {
+          return;
+        }
         var rangeInSheet = Sheet.getRange(self.startRow + 1, self.startCol, self.rows - 1, 1);
         self.clearRanges.push(rangeInSheet);
         var annotation = rangeInSheet.getA1Notation();
@@ -252,7 +265,10 @@
       }
     },
 
-    DefinedRange: function (rangeOptions) {
+    DefinedRange: function (rangeOptions, Sheet) {
+      if(rangeOptions.value == ""){
+        return;
+      }
       Object.assign(this, rangeOptions);
       var self = this;
       this.clearRanges = [self.defaultRange];
@@ -314,13 +330,36 @@
 function testGetValuesFromSheetMSM() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var ssid = ss.getId();
-  var sheetName = ss.getActiveSheet().getName();
-  var msm = montagSM(ssid, sheetName);
-  var rangeBParameters = {
-    startRow: 5,
-    startCol: 1,
-    cols: 2
+  // var sheetName = ss.getActiveSheet().getName();
+  const INTROS_SHEETNAME = "Introductions & Visions";
+  var param = {
+    sheetName: INTROS_SHEETNAME,
+    rangesOptionsArray: [
+      {
+        rangeName: "introsRangeParam",
+        type: "OnTopRange",
+        startRow: 5,
+        startCol: 1,
+        cols: 3
+      },
+      {
+        rangeName: "visionsRangeParam",
+        type: "OnTopRange",
+        startRow: 5,
+        startCol: 7,
+        cols: 3
+      },
+      {
+        rangeName: "otherInfoRangeParam",
+        type: "VerticalRange",
+        startRow: 5,
+        startCol: 14,
+        cols: 3
+      }
+    ]
   }
-  msm.getOnTopRangeRange(rangeBParameters);
-  var z
+
+  var ismObj = ISMF.init(ssid).readInterfaceSheet(param);
+  var introSheetInterface = ismObj.interfaceSheetsObj[INTROS_SHEETNAME];
+  introSheetInterface.clearSheet();
 }

@@ -115,8 +115,13 @@
       this.setRange = function () {
 
       }
-      this.indexValues = function () {
-        self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr);
+      this.indexValues = function (indexOn) {
+        self.indexOn = self.indexOn ? self.indexOn : indexOn;
+        if (!self.indexOn) {
+          console.log("No indexing paramter provided");
+          return;
+        }
+        self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr, self.indexOn);
       }
       function getVerticalRangeObjByHeader() {
         var rangeVariablesObjArr = [];
