@@ -11,9 +11,10 @@
   const DEFAULT_TYPE = "";
 
   var Spreadsheet
+  var ignoreEmpty = false;
 
-  function init(ssid) {
-    initiateSpreadSheet(ssid);
+  function init(ssid, initiateParam) {
+    initiateSpreadSheet(ssid, initiateParam);
     const InterfaceSheetManager = {
       Spreadsheet: Spreadsheet,
       interfaceSheetsObj: {},
@@ -36,10 +37,14 @@
     return InterfaceSheetManager;
   }
 
-  function initiateSpreadSheet(ssid) {
+  function initiateSpreadSheet(ssid, initiateParam) {
     SpreadsheetApp.flush();
     ssid = ssid || DEFAULT_SSID;
     Spreadsheet = SpreadsheetApp.openById(ssid);
+    if (!initiateParam) {
+      return;
+    }
+    ignoreEmpty = initiateParam.ignoreEmpty ? true : false;
   }
 
   function ParametersObj(param) {
@@ -58,12 +63,17 @@
     Object.assign(this, rngParam);
     if (this.definedRangeName) {
       this.defaultRange = Sheet.getRange(this.definedRangeName);
-      this.startRow = defaultRange.getRow();
-      this.startCol = defaultRange.getColumn();
+      this.values = this.defaultRange.getValues();
+      if (this.values.length > 1 || this.values[0] > 1) {
+        this.rows = this.rows || this.values.length;
+        this.cols = this.cols || this.values[0].length;
+      }
+      this.startRow = this.defaultRange.getRow();
+      this.startCol = this.defaultRange.getColumn();
     }
-    this.defaultRange = Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
+    this.defaultRange = this.defaultRange || Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
     this.value = this.defaultRange.getValue();
-    this.values = this.defaultRange.getValues();
+    this.values = this.values || this.defaultRange.getValues();
   }
 
   function InterfaceSheetObj(Sheet, paramObj) {
@@ -91,20 +101,21 @@
 
 
   var ISMFMethods = {
-    VerticalRange: function (rangeOptions, Sheet) {
+    TableRange: function (rangeOptions, Sheet) {
       this.rangeRepeats = 1;
       Object.assign(this, rangeOptions);
       var self = this;
-      var transposedArray = transpose(rangeOptions.values);
-      var clearPrefArr = this.clearPref ? transposedArray.shift() : [];
+      var valuesArray = rangeOptions.transpose ? transpose(rangeOptions.values) : rangeOptions.values;
+      this.userHeader = valuesArray.shift();
+      this.header = valuesArray.shift();
+      var clearPrefArr = this.clearPref ? valuesArray.shift() : [];
+      var requiredRange = this.requiredArray ? valuesArray.shift() : [];
       var rangesListAnn = [];
       this.rangeRepeat = this.indexOn ? this.rangeRepeats : 1;
-      this.valuesColOffset = transposedArray.length - this.rangeRepeats;
-      this.userHeader = transposedArray.shift();
-      this.header = transposedArray.shift();
-      this.values = transposedArray.slice(transposedArray.length - this.rangeRepeats);
+      this.valuesColOffset = valuesArray.length - this.rangeRepeats; //CHECK!
+      this.values = valuesArray.slice(this.valuesColOffset); //CHECK!
       this.clearRanges = [];
-      this.rangeVariablesObjArr = getVerticalRangeObjByHeader();
+      this.rangeVariablesObjArr = getTableRangeObjByHeader();
       this.objectifiedValues = new AutoIndexedValues();
       this.indexedValues = [];
       this.rangeList = Sheet.getRangeList(rangesListAnn);
@@ -123,12 +134,12 @@
         }
         self.indexedValues = new IndexedObjectifiedValues(self.rangeVariablesObjArr, self.indexOn);
       }
-      function getVerticalRangeObjByHeader() {
+      function getTableRangeObjByHeader() {
         var rangeVariablesObjArr = [];
         self.values.forEach((row, i) => {
           var obj = {};
           row.forEach((col, j) => {
-            if (col == "") {
+            if (col == "" && ignoreEmpty) {
               return;
             }
             var rangeVariablesObj = new RangeVariablesObj(col, i, j);
@@ -148,11 +159,15 @@
           if (!rowClearPref || rowClearPref == "") {
             self.clearRanges.push(rangeInSheet);
           }
+          if (header[j] == "") {
+            return
+          }
           this[header[j]] = {};
           this[header[j]].userHeader = self.userHeader[j];
           this[header[j]].value = col
           this[header[j]].rowInSheet = rowInSheet;
           this[header[j]].rangeInSheet = rangeInSheet;
+          this[header[j]].isEmpty = col == "" ? true : false;
         };
         return rangeVariablesObjArr;
       }
@@ -182,16 +197,21 @@
       function OnTopRangeObjValues() {
         var onTopObj = this;
         self.values.forEach((row, i, arr) => {
-          if (row[0] != "header" || arr[i + 1][1] == "") {
+          var headerIndicator = row[0];
+          var header = row[1];
+          var userHeader = row[2];
+          var valueCell = arr[i + 1][1];
+          if (headerIndicator != "header" || (valueCell == "" && ignoreEmpty)) {
             return
           }
           var rangeInSheet = Sheet.getRange(self.startRow + i + 1, self.startCol + 1);
           self.clearRanges.push(rangeInSheet);
           var annotation = rangeInSheet.getA1Notation();
           rangesListAnn.push(annotation);
-          onTopObj[row[1]] = {};
-          onTopObj[row[1]].userHeader = row[2];
-          onTopObj[row[1]].value = arr[i + 1][1];
+          onTopObj[header] = {};
+          onTopObj[header].userHeader = userHeader;
+          onTopObj[header].value = valueCell;
+          onTopObj[header].isEmpty = valueCell == "" ? true : false;
 
         })
       }
@@ -218,12 +238,15 @@
         for (let i = 0; i < lengthOfValues; i++) {
           if (i % skip == 0) {
             counter = 0;
-            var key = values[i][0];
+            key = values[i][0];
+            var userHeader = values[i][1];
             skipRangeObj[key] = {};
-            skipRangeObj[key].userHeader = values[i][1];
+            skipRangeObj[key].userHeader = userHeader;
             counter++
           } else if (counter == 1) {
-            skipRangeObj[key].value = values[i][0];
+            var value = values[i][0];
+            skipRangeObj[key].value = value;
+            skipRangeObj[key].isEmpty = value == "" ? true : false;
             var rangeInSheet = Sheet.getRange(self.startRow + i, self.startcol);
             self.clearRanges.push(rangeInSheet);
             var annotation = rangeInSheet.getA1Notation();
@@ -251,8 +274,9 @@
         var header = headerRow[1];
         var listArray = values.map(row => {
           return row[0];
-        }).filter(row => row != "");
-        if (listArray.length == 0) {
+        })
+        var filteredArray = listArray.filter(row => row != "");
+        if (filteredArray.length == 0 && ignoreEmpty) {
           return;
         }
         var rangeInSheet = Sheet.getRange(self.startRow + 1, self.startCol, self.rows - 1, 1);
@@ -261,12 +285,13 @@
         rangesListAnn.push(annotation);
         this[header] = {}
         this[header].userHeader = userHeader
-        this[header].value = listArray;
+        this[header].value = filteredArray;
+        this[header].isEmpty = filteredArray.length == 0 ? true : false;
       }
     },
 
     DefinedRange: function (rangeOptions, Sheet) {
-      if(rangeOptions.value == ""){
+      if (rangeOptions.value == "" && ignoreEmpty) {
         return;
       }
       Object.assign(this, rangeOptions);
@@ -281,6 +306,7 @@
         this[definedRangeName] = {};
         this[definedRangeName].userHeader = definedRangeName;
         this[definedRangeName].value = self.value;
+        this[definedRangeName].isEmpty = self.value == "" ? true : false;
       }
     }
   }

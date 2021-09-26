@@ -29,7 +29,8 @@
         },
         {
           rangeName: "otherInfoRangeParam",
-          type: "VerticalRange",
+          type: "TableRange",
+          transpose: true,
           startRow: 5,
           startCol: 14,
           cols: 3
@@ -41,14 +42,16 @@
       rangesOptionsArray: [
         {
           rangeName: "facebookInfoRange",
-          type: "VerticalRange",
+          type: "TableRange",
+          transpose: true,
           startRow: 5,
           startCol: 1,
           cols: 3
         },
         {
           rangeName: "instagramInfoRange",
-          type: "VerticalRange",
+          type: "TableRange",
+          transpose: true,
           startRow: 5,
           startCol: 5,
           cols: 3
@@ -60,7 +63,8 @@
       rangesOptionsArray: [
         {
           rangeName: "emailInfoRange",
-          type: "VerticalRange",
+          type: "TableRange",
+          transpose: true,
           startRow: 5,
           startCol: 2,
           cols: 3,
@@ -86,15 +90,12 @@
   ]
 
   function extractAllInputs() {
-    var inputsObj = {};
     var ismObj = ISMF.init(SSID);
     ALL_INPUTS_SOURCES_ARRAY.forEach(rangeParam => {
-      var allObjectifiedValues = ismObj.readInterfaceSheet(rangeParam).allObjectifiedValues;
-      var introSheetInterface = ismObj.interfaceSheetsObj[rangeParam.sheetName];
-      introSheetInterface.clearSheet();
-      Object.assign(inputsObj, allObjectifiedValues);
+      ismObj.readInterfaceSheet(rangeParam);
     })
-    return inputsObj;
+    var inputsObj = ismObj.allObjectifiedValues;
+    return inputsObj
   }
 
   SHEETS_MANAGER.extractAllInputs = extractAllInputs;

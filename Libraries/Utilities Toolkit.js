@@ -165,7 +165,16 @@
         var a1 = range.getA1Notation();
         range.setValues(writeArr);
     }
-
+    function createTemplateSimple(text, variables) {
+        var variablesKeys = Object.keys(variables);
+        variablesKeys.forEach(function (variable) {
+            var replacement = variables[variable];
+            var regex = new RegExp("<" + variable + ">", "g");
+            text = text.replace(regex, replacement)
+        })
+        return text;
+    }
+    Toolkit.createTemplateSimple = createTemplateSimple;
     Toolkit.readFromJSON = readFromJSON;
     Toolkit.writeToJSON = writeToJSON;
     Toolkit.createJSON = createJSON;
