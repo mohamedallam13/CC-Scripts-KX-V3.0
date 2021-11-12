@@ -6,6 +6,8 @@
         "Toolkit.js",
         "Imp.js",
         "ISMF.js",
-        "ReferencesRequire.js"
+        "DividedSMFramework.js",
+        "ReferencesRequire.js",
+        "GSheets-UI.js"
     ]
 }

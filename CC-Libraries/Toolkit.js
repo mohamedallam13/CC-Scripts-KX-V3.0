@@ -180,3 +180,8 @@
 
   return Toolkit
 })
+
+
+function permission(){
+  SpreadsheetApp.getActive();
+}
