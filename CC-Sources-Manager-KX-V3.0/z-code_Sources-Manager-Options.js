@@ -4,20 +4,13 @@
 
   const SOURCES_MANAGER_OPTIONS = {};
 
-  var sheetNames;
+  const DIVIDED_SHEETS_MANAGER = CCLIBRARIES.DIVIDED_SHEETS_MANAGER;
 
-  function getSheetNames() {
-    sheetNames = ["CCMAIN", "CCG"]
-  }
-
-  function getCurrentSheet() {
-    return SpreadsheetApp.getActiveSheet().getSheetName();
-  }
+  var sheetObj;
 
   function setMapsForAll() {
-    getSheetNames();
     var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sheetNames.forEach(sheetName => {
+    SHEETS_ARRAY.forEach(sheetName => {
       setMapsPerActivity(sheetName, sourcesSSObj)
     })
   }
@@ -61,7 +54,7 @@
       var mapsRow = maps.startRow;
       var mapsCol = lastMapEntry + i + 1;
       var mapsRows = maps.lastRow - maps.startRow + 1
-      Toolkit.setValidationList(sheet, sourceHeader, mapsRow, mapsCol, mapsRows, 1);
+      setValidationList(sheet, sourceHeader, mapsRow, mapsCol, mapsRows, 1);
       if (unMappedSourceObj.autoActivate != "YES") {
         continue;
       }
@@ -79,11 +72,25 @@
       headerRow: unMappedSourceObj.headerRow,
       skipRows: unMappedSourceObj.skipRows
     }
-    var impObj = imp.createSpreadsheetManager(unMappedSourceObj.ssid);
-    var sheetObj = impObj.addSheets(unMappedSourceObj.sheetName).parseSheet(parseObj);
+    getSheetData(unMappedSourceObj, parseObj);
     var header = sheetObj.header;
     sourceHeader.unshift(unMappedSourceObj["#"]);
     return header
+  }
+
+  function getSheetData(unMappedSourceObj, parseObj){
+    var impObj = imp.createSpreadsheetManager(unMappedSourceObj.ssid);
+    sheetObj = impObj.addSheets(unMappedSourceObj.sheetName).parseSheet(parseObj);
+  }
+
+  function setValidationList(sheet, list, row, col, rows, cols) {
+    var rule = SpreadsheetApp.newDataValidation().requireValueInList(list).build();
+    if (rows && cols) {
+      var range = sheet.getRange(row, col, rows, cols);
+    } else {
+      var range = sheet.getRange(row, col);
+    }
+    range.setDataValidation(rule);
   }
 
   function addLastMap(lastMapEntry, sheet, row, col) {

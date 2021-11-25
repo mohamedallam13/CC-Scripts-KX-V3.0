@@ -21,10 +21,16 @@
         fileLabels.forEach(fileLabel => {
           console.log(fileLabel);
           var fileId = self.masterIndex[fileLabel];
-          if (!fileId || requireFilesLables.includes(fileLabel)) {
+          if (!fileId) {
             console.log("File not in Index");
             return;
           }
+
+          if (requireFilesLables.includes(fileLabel)) {
+            console.log("File already required");
+            return;
+          }
+
           var fileContent = Toolkit.readFromJSON(fileId);
           self.requiredFiles[fileLabel] = {};
           self.requiredFiles[fileLabel].fileId = fileId;

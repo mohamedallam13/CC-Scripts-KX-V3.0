@@ -4,34 +4,30 @@
 
   const SOURCE_FILE_CONSTRUCTOR = {};
 
-  const MASTER_INDEX_FILE_ID = "18v8jqGGsu3PYmLWkFH0tFVSqhQzMJfsn"
+  const REFERENCES_MANAGER = CCLIBRARIES.REFERENCES_MANAGER;
 
-  var sheetNames;
+  const REQUIRED_REFERENCES = ["sourcesfilesindex"];
 
-  var masterIndex;
-  var sourceOriginalFile;
-
-  function getSheetNames() {
-    sheetNames = ["CCMAIN", "CCG"]
-  }
+  var referencesObj;
 
   function createSourcesFile(isNewBool) {
     var fileObj = {};
-    getSheetNames();
     getReferences();
     var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sheetNames.forEach(sheetName => {
+    SHEETS_ARRAY.forEach(sheetName => { // SHEETS_ARRAY is the array brought in from the division properties file because this file is the main config for all divisions, so it is logical to have it as the source
       sourcesSSObj.readSourcesSheet(sheetName);
       var subTablesObj = sourcesSSObj.sheetsObject[sheetName].subTablesObj;
       populateFileObj(fileObj, subTablesObj, isNewBool)
     })
-    Toolkit.writeToJSON(fileObj, masterIndex.sourcesIndexedFileId);
+    writeToSourcesFile();
   }
 
   function getReferences() {
-    masterIndex = masterIndex || Toolkit.readFromJSON(MASTER_INDEX_FILE_ID);
-    sourceOriginalFile = sourceOriginalFile || Toolkit.readFromJSON(masterIndex.sourcesIndexedFileId);
+    referencesObj = REFERENCES_MANAGER.defaultReferences.requireFiles(REQUIRED_REFERENCES).requiredFiles;
+  }
 
+  function writeToSourcesFile(){
+    referencesObj.sourcesfilesindex.update();
   }
 
   function populateFileObj(fileObj, subTablesObj, isNewBool) {

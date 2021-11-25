@@ -4,25 +4,19 @@
 
   const SOURCE_INFO_MANAGER = {};
 
-  const MASTER_INDEX_FILE_ID = "18v8jqGGsu3PYmLWkFH0tFVSqhQzMJfsn"
+  const REFERENCES_MANAGER = CCLIBRARIES.REFERENCES_MANAGER;
 
-  var sheetNames;
+  const REQUIRED_REFERENCES = ["divisionsProperties"];
 
-  var masterIndex;
-  var divisionProperties;
-
-  function getSheetNames() {
-    sheetNames = ["CCMAIN", "CCG"]
-  }
+  var referencesObj;
 
   function getCurrentSheet() {
     return SpreadsheetApp.getActiveSheet().getSheetName();
   }
 
   function addNewSourcesInAllSheets() {
-    getSheetNames();
     var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sheetNames.forEach(sheetName => {
+    SHEETS_ARRAY.forEach(sheetName => {
       addAllSourcesPerActivity(sheetName, sourcesSSObj)
     })
   }
@@ -63,9 +57,7 @@
   }
 
   function getReferences() {
-    masterIndex = masterIndex || Toolkit.readFromJSON(MASTER_INDEX_FILE_ID);
-    divisionProperties = divisionProperties || Toolkit.readFromJSON(masterIndex.divisionProperties);
-
+    referencesObj = REFERENCES_MANAGER.defaultReferences.requireFiles(REQUIRED_REFERENCES).requiredFiles;
   }
 
   function ParamObj(param) {
@@ -98,13 +90,14 @@
       this.formId = form.getId();
     }
     Object.assign(this, new SourceInfo(paramObj));
-    this.accepting = true;
-    this.include = false;
+    this.accepting = paramObj.accepting ? paramObj.accepting.toString().toUpperCase() : "TRUE";
+    this.include = paramObj.include ? paramObj.include : false;
   }
 
   function SourceInfo(paramObj) {
+    var divisionsProperties = referencesObj.divisionsProperties.fileContent;
     this.primaryClassifierCode = paramObj.sheetName;
-    this.branch = findParentParamter(divisionProperties, this.primaryClassifierCode);
+    this.branch = findParentParamter(divisionsProperties, this.primaryClassifierCode);
     this.primaryClassifierName = divisionProperties[this.branch][this.primaryClassifierCode].name;
     this.secondaryClassifierName = paramObj.secondaryClassifierName || "";
     this.secondaryClassifierCode = paramObj.secondaryClassifierCode || "";
