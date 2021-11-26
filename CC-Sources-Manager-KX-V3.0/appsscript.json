@@ -1,15 +1,15 @@
 {
   "timeZone": "Europe/Paris",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
   "dependencies": {
     "libraries": [
       {
         "userSymbol": "CCLIBRARIES",
-        "version": "2",
         "libraryId": "1M-HVmwVCGEcG5fEOfYPWkNat4p8LZidFiC6vsUBtGTt74gc19ASNmJRh",
-        "developmentMode": false
+        "version": "0",
+        "developmentMode": true
       }
     ]
-  },
-  "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
+  }
 }

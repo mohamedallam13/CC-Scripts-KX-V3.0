@@ -5,19 +5,23 @@
   const SOURCE_FILE_CONSTRUCTOR = {};
 
   const REFERENCES_MANAGER = CCLIBRARIES.REFERENCES_MANAGER;
+  const DIVIDED_SHEETS_MANAGER = CCLIBRARIES.DSMF;
+  const SHEETS_ARRAY = SHEET_PROPERTIES.SHEETS_ARRAY;
+  const SSID = SHEET_PROPERTIES.SSID;
+  const SHEET_OPTIONS_ARRAY = SHEET_PROPERTIES.SHEET_OPTIONS_ARRAY;
 
-  const REQUIRED_REFERENCES = ["sourcesfilesindex"];
+  const REQUIRED_REFERENCES = ["sourcesIndexed"];
 
   var referencesObj;
+  var fileObj = {};
+
 
   function createSourcesFile(isNewBool) {
-    var fileObj = {};
     getReferences();
-    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
+    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.init(SSID);
     SHEETS_ARRAY.forEach(sheetName => { // SHEETS_ARRAY is the array brought in from the division properties file because this file is the main config for all divisions, so it is logical to have it as the source
-      sourcesSSObj.readSourcesSheet(sheetName);
-      var subTablesObj = sourcesSSObj.sheetsObject[sheetName].subTablesObj;
-      populateFileObj(fileObj, subTablesObj, isNewBool)
+      var dividedSheetObj = sourcesSSObj.readDividedSheet({ sheetName: sheetName, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject[sheetName];
+      populateFileObj(fileObj, dividedSheetObj, isNewBool)
     })
     writeToSourcesFile();
   }
@@ -26,13 +30,13 @@
     referencesObj = REFERENCES_MANAGER.defaultReferences.requireFiles(REQUIRED_REFERENCES).requiredFiles;
   }
 
-  function writeToSourcesFile(){
+  function writeToSourcesFile() {
     referencesObj.sourcesfilesindex.update();
   }
 
-  function populateFileObj(fileObj, subTablesObj, isNewBool) {
-    var sourcesObjValues = subTablesObj.sources.objectifiedValues;
-    var maps = subTablesObj.maps.objectifiedValues;
+  function populateFileObj(fileObj, dividedSheetsObject, isNewBool) {
+    var sourcesObjValues = dividedSheetsObject.subTablesObj.sources.objectifiedValues;
+    var maps = dividedSheetsObject.subTablesObj.maps.objectifiedValues;
 
     sourcesObjValues.forEach((source, i) => {
       if (!source.include) {
@@ -58,14 +62,15 @@
   }
 
   function getOriginalSourcesArr(source, i) {
+    var sourceOriginalFile = referencesObj.sourcesIndexed.fileContent;
     if (!sourceOriginalFile[source.branch]) {
-      return;
+      fileObj[source.branch] = {};
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode]) {
-      return;
+      fileObj[source.branch][source.primaryClassifierCode] = [];
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode][i]) {
-      return
+      return { counter: 0 }
     }
     return sourceOriginalFile[source.branch][source.primaryClassifierCode][i];
   }

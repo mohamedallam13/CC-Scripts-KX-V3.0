@@ -4,7 +4,13 @@
 
   const SOURCE_INFO_MANAGER = {};
 
+  // const SHEETS_ARRAY = getSources();
+
   const REFERENCES_MANAGER = CCLIBRARIES.REFERENCES_MANAGER;
+  const DIVIDED_SHEETS_MANAGER = CCLIBRARIES.DSMF;
+  const SHEETS_ARRAY = SHEET_PROPERTIES.SHEETS_ARRAY;
+  const SSID = SHEET_PROPERTIES.SSID;
+  const SHEET_OPTIONS_ARRAY = SHEET_PROPERTIES.SHEET_OPTIONS_ARRAY;
 
   const REQUIRED_REFERENCES = ["divisionsProperties"];
 
@@ -15,7 +21,7 @@
   }
 
   function addNewSourcesInAllSheets() {
-    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
+    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.init();
     SHEETS_ARRAY.forEach(sheetName => {
       addAllSourcesPerActivity(sheetName, sourcesSSObj)
     })
@@ -23,23 +29,25 @@
 
   function addAllSourcesPerActivity(sheetName, sourcesSSObj) {
     sheetName = sheetName || getCurrentSheet();
-    sourcesSSObj = sourcesSSObj || DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sourcesSSObj.readSourcesSheet(sheetName);
-    var subTablesObj = sourcesSSObj.sheetsObject[sheetName].subTablesObj;
-    var sources = subTablesObj.sources.objectifiedValues;
+    sourcesSSObj = sourcesSSObj || DIVIDED_SHEETS_MANAGER.init(SSID);
+    var dividedSheetsObject = sourcesSSObj.readDividedSheet({ sheetName: sheetName, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject;
+    var dividedSheetObj = dividedSheetsObject[sheetName];
+    var sources = dividedSheetObj.subTablesObj.sources;
     var pendingSources = getPendingSources(sources);
     pendingSources.forEach(pendingSource => {
       var param = {
-        sources: sources,
-        pendingSource: pendingSource,
+        dividedSheetObj: dividedSheetObj, // Because we need the Sheet parameter which resides in the dividedSheetObj of each sheet
+        orderInSheet: pendingSource.orderInSheet,
+        primaryClassifierCode: sheetName,
         URL: pendingSource.URL
       }
+      var param = Object.assign({}, pendingSource, param);
       addNewSource(param);
     })
   }
 
   function getPendingSources(sources) {
-    var pendingSources
+    var pendingSources = sources.objectifiedValues.filter(row => row.activated != "YES");
     return pendingSources;
   }
 
@@ -47,13 +55,13 @@
     var paramObj = new ParamObj(param);
     getReferences();
     var completeInfoObj;
-    switch (param.sourceType) {
-      case "gSheet":
+    switch (paramObj.sourceType) {
+      case "GSheet":
         completeInfoObj = new CompleteGSheetInfoObj(paramObj);
 
       default:
     }
-    writeToSources(completeInfoObj, source)
+    writeToSources(completeInfoObj)
   }
 
   function getReferences() {
@@ -61,44 +69,49 @@
   }
 
   function ParamObj(param) {
-    Object.assigm(this, param);
-    this.sheetName = param.activity || sources.Sheet.getSheetName();
-    this.sources = sources || DIVIDED_SHEETS_MANAGER.getSpreadSheetObj().readSourcesSheet(this.sheetName).subTablesObj;
+    var self = this;
+    Object.assign(this, param);
+    this.sourceType = this.sourceType || this.type;
+    this.dividedSheetObj = param.dividedSheetsObject || DIVIDED_SHEETS_MANAGER.init(SSID).readDividedSheet({ sheetName: this.primaryClassifierCode, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject[this.primaryClassifierCode];
   }
 
   function CompleteGSheetInfoObj(paramObj) {
-    this.queryParam = Object.assign({}, paramObj);
-    this.type = this.sourceType;
-    this.sheetName = "Form Responses 1";
+    // Defaults
+    var self = this;
     this.headerRow = 1;
     this.skipRows = 0;
+    //Merging to replace defaults
+    Object.assign(this, paramObj);
+    this.type = this.sourceType || this.type;
+    this.sheetName = !this.sheetName || this.sheetName == "" ? "Form Responses 1" : this.sheetName;
     if (paramObj.autoActions) {
       Object.assign(this, paramObj.autoActions);
     }
+    this.accepting = paramObj.accepting ? paramObj.accepting.toString().toUpperCase() : "TRUE";
+    this.include = paramObj.include ? paramObj.include : false;
     if (paramObj.formResponsesOptions) {
       Object.assign(this, paramObj.formResponsesOptions);
     }
-    var sourceSpreadsheet = paramObj.URL ? SpreadsheetApp.openByUrl(URL) : SpreadsheetApp.openByUrl(param.ssid);
+    var sourceSpreadsheet = this.URL ? SpreadsheetApp.openByUrl(this.URL) : SpreadsheetApp.openByUrl(this.ssid);
     this.ssid = sourceSpreadsheet.getId();
     this.URL = sourceSpreadsheet.getUrl();
     this.bookName = sourceSpreadsheet.getName();
     this.creationDate = DriveApp.getFileById(this.ssid).getDateCreated();
-    this.formId = "No Form";
+    this.formid = "No Form";
     var formURL = sourceSpreadsheet.getFormUrl();
     if (formURL) {
       var form = FormApp.openByUrl(formURL);
-      this.formId = form.getId();
+      this.formid = form.getId();
     }
     Object.assign(this, new SourceInfo(paramObj));
-    this.accepting = paramObj.accepting ? paramObj.accepting.toString().toUpperCase() : "TRUE";
-    this.include = paramObj.include ? paramObj.include : false;
+    delete this["#"];
   }
 
   function SourceInfo(paramObj) {
     var divisionsProperties = referencesObj.divisionsProperties.fileContent;
-    this.primaryClassifierCode = paramObj.sheetName;
+    this.primaryClassifierCode = paramObj.primaryClassifierCode;
     this.branch = findParentParamter(divisionsProperties, this.primaryClassifierCode);
-    this.primaryClassifierName = divisionProperties[this.branch][this.primaryClassifierCode].name;
+    this.primaryClassifierName = divisionsProperties[this.branch][this.primaryClassifierCode].name;
     this.secondaryClassifierName = paramObj.secondaryClassifierName || "";
     this.secondaryClassifierCode = paramObj.secondaryClassifierCode || "";
   }
@@ -113,18 +126,23 @@
     }
   }
 
-  function writeToSources(completeInfoObj, source) {
-    var writeArr = getWriteArr(completeInfoObj, source.header);
-    var pendingSource = completeInfoObj.queryParam.pendingSource
-    var writeRow = pendingSource ? pendingSource.orderInSheet : source.lastRow + 1;
-    source.Sheet.getRange(writeRow, source.startCol, writeArr[0].length, writeArr.length).setValues(writeArr);
+  function writeToSources(completeInfoObj) {
+    var dividedSheetObj = completeInfoObj.dividedSheetObj;
+    var sourcesTableObj = dividedSheetObj.subTablesObj.sources;
+    var writeArr = getWriteArr(completeInfoObj, sourcesTableObj.header);
+    var writeRow = completeInfoObj.orderInSheet || sourcesTableObj.lastRow + 1; // Is this a pending source? if yes the info will include orderInSheet, if not then we simply append to the end of the sources table as a new source coming over from the API
+    dividedSheetObj.Sheet.getRange(writeRow, sourcesTableObj.startCol, writeArr.length, writeArr[0].length).setValues(writeArr);
   }
 
   function getWriteArr(completeInfoObj, header) {
     var writeArr = []
     var rowArr = [];
     header.forEach(col => {
-      rowArr.push(completeInfoObj[col])
+      if (completeInfoObj[col] !== undefined) {
+        rowArr.push(completeInfoObj[col])
+      } else {
+        rowArr.push(null)
+      }
     })
     writeArr.push(rowArr);
     return writeArr;
