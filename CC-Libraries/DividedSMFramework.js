@@ -67,7 +67,7 @@
         return
       }
       var extractedTable = extractSubTable(dataRegionValues, startCoord.rowIndex, localStartColIndex, j);
-      var extractedTableOptions = new TableOptionsObj(extractedTable, startCoord.rowIndex, startCoord.colIndex, j);
+      var extractedTableOptions = new TableOptionsObj(extractedTable, startCoord.rowIndex, localStartColIndex, j);
       extractedTables.push({ extractedTable: extractedTable, extractedTableOptions: extractedTableOptions });
       localStartColIndex = j + 1;
     })

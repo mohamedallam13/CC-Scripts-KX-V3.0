@@ -24,6 +24,7 @@
       populateFileObj(fileObj, dividedSheetObj, isNewBool)
     })
     writeToSourcesFile();
+    return { success: true }
   }
 
   function getReferences() {
@@ -31,7 +32,7 @@
   }
 
   function writeToSourcesFile() {
-    referencesObj.sourcesfilesindex.update();
+    referencesObj.sourcesIndexed.update(fileObj);
   }
 
   function populateFileObj(fileObj, dividedSheetsObject, isNewBool) {
@@ -44,7 +45,7 @@
       }
       var originalEntry = getOriginalSourcesArr(source, i);
       var newSourceEntry = createSourceFileEntryObj(source, maps, isNewBool, originalEntry);
-      addToFileObj(fileObj, newSourceEntry)
+      addToFileObj(newSourceEntry);
     });
   }
 
@@ -55,19 +56,17 @@
     if (isNewBool) {
       source.counter = 0;
     }
-    if (originalEntry) {
-      newSourceEntry = Object.assign({}, origianlSource, source);
-    }
+    var newSourceEntry = Object.assign({}, originalEntry, source);
     return newSourceEntry
   }
 
   function getOriginalSourcesArr(source, i) {
     var sourceOriginalFile = referencesObj.sourcesIndexed.fileContent;
     if (!sourceOriginalFile[source.branch]) {
-      fileObj[source.branch] = {};
+      return { counter: 0 }
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode]) {
-      fileObj[source.branch][source.primaryClassifierCode] = [];
+      return { counter: 0 }
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode][i]) {
       return { counter: 0 }
@@ -79,7 +78,7 @@
     return obj.filter(row => row[searchField] == itemToSearch)[0];
   } //TODO move to tools
 
-  function addToFileObj(fileObj, source) {
+  function addToFileObj(source) {
     if (!fileObj[source.branch]) {
       fileObj[source.branch] = {}
     }

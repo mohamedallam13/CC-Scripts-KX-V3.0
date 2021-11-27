@@ -32,22 +32,27 @@
           }
 
           var fileContent = Toolkit.readFromJSON(fileId);
-          self.requiredFiles[fileLabel] = {};
-          self.requiredFiles[fileLabel].fileId = fileId;
-          self.requiredFiles[fileLabel].fileContent = fileContent;
-          self.requiredFiles[fileLabel].update = function () {
-            var requiredFile = self.requiredFiles[fileLable];
+          self.requiredFiles[fileLabel] = new ReferenceObj(fileId, fileContent, fileLabel, self);
+        })
+
+        function ReferenceObj(fileId, fileContent, fileLabel, self) {
+          this.fileId = fileId;
+          this.fileContent = fileContent;
+          this.update = function (data) {
+            var requiredFile = self.requiredFiles[fileLabel];
             var fileId = requiredFile.fileId;
-            var data = requiredFile.fileConent;
+            data = data || requiredFile.fileContent;
             Toolkit.writeToJSON(data, fileId);
+            return self
           };
-          self.requiredFiles[fileLabel].reRead = function () {
-            var requiredFile = self.requiredFiles[fileLable];
+          this.reRead = function () {
+            var requiredFile = self.requiredFiles[fileLabel];
             var fileId = requiredFile.fileId;
             self.requiredFiles[fileLable].fileContent = Toolkit.readFromJSON(fileId);
-            return this;
+            return self;
           }
-        })
+        }
+
         return this;
       }
     }

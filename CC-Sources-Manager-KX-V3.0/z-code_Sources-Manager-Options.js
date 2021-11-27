@@ -151,6 +151,10 @@
 })
 
 function runAutoAddSource(param) {
+  if(!param){
+    console.log("No params provided");
+    return;
+  }
   SOURCE_INFO_MANAGER.addNewSource(param);
   SOURCES_MANAGER_OPTIONS.setMapsPerActivity(param.primaryClassifierCode);
   SOURCE_FILE_CONSTRUCTOR.createSourcesFile();

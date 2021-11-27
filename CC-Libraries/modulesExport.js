@@ -7,7 +7,7 @@
     function getRequest(e, scope) {
         var payload = JSON.parse(e.postData.contents).event;
         var process = payload.requestObj.process;
-        var response = getMethod(scope, process)(payload);
+        var response = getMethod(scope, process)(payload.requestObj);
         try {
             var convertedResponse = ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
         } catch (e) {
@@ -19,7 +19,7 @@
     function postRequest(e, scope) {
         var payload = JSON.parse(e.postData.contents).event;
         var process = payload.requestObj.process;
-        var response = getMethod(scope, process)(payload);
+        var response = getMethod(scope, process)(payload.requestObj);
         try {
             var convertedResponse = ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
         } catch (e) {
