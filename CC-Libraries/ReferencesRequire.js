@@ -12,6 +12,16 @@
     const referencesRequireObj = {
       masterIndex: Toolkit.readFromJSON(masterIndexId),
       requiredFiles: {},
+      giveAccess: function (users) {
+        if (!Array.isArray(users)) {
+          users = [users];
+        }
+        DriveApp.getFileById(DEFAULT_MASTER_INDEX_FILE_ID).addViewers(users);
+        const masterIndex = this.masterIndex;
+        Object.keys(masterIndex).forEach(function (fileId) {
+          DriveApp.getFileById(masterIndex[fileId]).addViewers(users);
+        })
+      },
       requireFiles: function (fileLabels) {
         var requireFilesLables = Object.keys(this.requiredFiles);
         self = this;
@@ -65,9 +75,8 @@
   return REFERENCES_MANAGER;
 })
 
-
-function test() {
-  var files = ["divisionsProperties"];
-  REFERENCES_MANAGER.defaultReferences.requiredFiles.divisionsProperties.reRead();
-  var k
+function giveAccess() {
+  const to = "galaxym88@gmail.com";
+  var references = REFERENCES_MANAGER.init();
+  references.giveAccess(to);
 }
