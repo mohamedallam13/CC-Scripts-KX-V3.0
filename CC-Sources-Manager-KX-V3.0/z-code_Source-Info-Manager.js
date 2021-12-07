@@ -78,17 +78,15 @@
   function CompleteGSheetInfoObj(paramObj) {
     // Defaults
     var self = this;
-    this.headerRow = 1;
-    this.skipRows = 0;
     //Merging to replace defaults
     Object.assign(this, paramObj);
     this.type = this.sourceType || this.type;
     this.sheetName = !this.sheetName || this.sheetName == "" ? "Form Responses 1" : this.sheetName;
+    this.headerRow = !this.headerRow || this.headerRow == "" ? 1 : this.headerRow;
+    this.skipRows = !this.skipRows || this.skipRows == "" ? 0 : this.skipRows;
     if (paramObj.autoActions) {
       Object.assign(this, paramObj.autoActions);
     }
-    this.accepting = paramObj.accepting ? paramObj.accepting.toString().toUpperCase() : "TRUE";
-    this.include = paramObj.include ? paramObj.include : false;
     if (paramObj.formResponsesOptions) {
       Object.assign(this, paramObj.formResponsesOptions);
     }
@@ -155,15 +153,3 @@
   return SOURCE_INFO_MANAGER
 
 })
-
-function addNewSourcesInAllSheets() {
-  SOURCE_INFO_MANAGER.addNewSourcesInAllSheets();
-}
-
-function addAllSourcesPerActivity() {
-  SOURCE_INFO_MANAGER.addAllSourcesPerActivity();
-}
-
-function addNewSource(param) {
-  SOURCE_INFO_MANAGER.addNewSource(param);
-}

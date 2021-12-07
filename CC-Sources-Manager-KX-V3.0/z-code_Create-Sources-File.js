@@ -21,7 +21,7 @@
     var sourcesSSObj = DIVIDED_SHEETS_MANAGER.init(SSID);
     SHEETS_ARRAY.forEach(sheetName => { // SHEETS_ARRAY is the array brought in from the division properties file because this file is the main config for all divisions, so it is logical to have it as the source
       var dividedSheetObj = sourcesSSObj.readDividedSheet({ sheetName: sheetName, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject[sheetName];
-      populateFileObj(fileObj, dividedSheetObj, isNewBool)
+      populateFileObj(dividedSheetObj, isNewBool)
     })
     writeToSourcesFile();
     return { success: true }
@@ -35,12 +35,12 @@
     referencesObj.sourcesIndexed.update(fileObj);
   }
 
-  function populateFileObj(fileObj, dividedSheetsObject, isNewBool) {
+  function populateFileObj(dividedSheetsObject, isNewBool) {
     var sourcesObjValues = dividedSheetsObject.subTablesObj.sources.objectifiedValues;
     var maps = dividedSheetsObject.subTablesObj.maps.objectifiedValues;
 
     sourcesObjValues.forEach((source, i) => {
-      if (!source.include) {
+      if (!source.include && source.activated == "") {
         return;
       }
       var originalEntry = getOriginalSourcesArr(source, i);
@@ -51,6 +51,9 @@
 
   function createSourceFileEntryObj(source, maps, isNewBool, originalEntry) {
     var sourceNum = source["#"]
+    if(sourceNum == 33){
+      var t = 6;
+    }
     var map = checkInArray(maps, "Base_Source", sourceNum);
     source.map = map;
     if (isNewBool) {

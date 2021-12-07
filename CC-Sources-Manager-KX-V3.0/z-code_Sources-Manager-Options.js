@@ -67,7 +67,7 @@
         continue;
       }
       var lastFilledMap = getLastFilledMap(allMaps);
-      if(!lastFilledMap){
+      if (!lastFilledMap) {
         continue;
       }
       addLastMap(lastFilledMap, sourceObj, sheet, mapsRow, mapsCol + 1);
@@ -121,7 +121,7 @@
   function getLastFilledMap(allMaps) {
     for (let i = allMaps.length - 1; i >= 0; i--) {
       var currentMap = allMaps[i];
-      if(currentMap[0] != ""){
+      if (currentMap[0] != "") {
         return currentMap;
       }
     }
@@ -149,33 +149,3 @@
   return SOURCES_MANAGER_OPTIONS
 
 })
-
-function runAutoAddSource(param) {
-  if(!param){
-    console.log("No params provided");
-    return;
-  }
-  SOURCE_INFO_MANAGER.addNewSource(param);
-  SOURCES_MANAGER_OPTIONS.setMapsPerActivity(param.primaryClassifierCode);
-  SOURCE_FILE_CONSTRUCTOR.createSourcesFile();
-}
-
-function testAutoRun() {
-  const param = {
-    formResponsesOptions: {
-      URL: "https://docs.google.com/spreadsheets/d/1zw7fnNh1zHWPXyn4BIB5jFCWh8sv-mtbUwebZOFCq_o/edit?usp=drive_web&ouid=101626450118027500527",
-      ssid: "1zw7fnNh1zHWPXyn4BIB5jFCWh8sv-mtbUwebZOFCq_o"
-    },
-    primaryClassifierName: "CC Gatherings",
-    primaryClassifierCode: "CCG",
-    secondaryClassifierName: "Season VIII Round 1",
-    secondaryClassifierCode: "SVIIIR1",
-    branch: "Events",
-    sourceType: "GSheet",
-    autoActions: {
-      accepting: true,
-      autoActivate: true
-    }
-  }
-  runAutoAddSource(param)
-}
