@@ -1,1 +1,9 @@
-{"scriptId":"1iSdIGPuyOn1ZIfxX5TrY1u2TeduUue7AWyhPqMgcZjx_uqltDtxCH4O6"}
+{
+    "scriptId": "1iSdIGPuyOn1ZIfxX5TrY1u2TeduUue7AWyhPqMgcZjx_uqltDtxCH4O6",
+    "filePushOrder": [
+        "y-code_Get-Sources.js",
+        "z-code_Create-Sources-File.js",
+        "z-code_Sources-Manager-Options.js",
+        "z-code_Sources-Manager-Options.js"
+    ]
+}

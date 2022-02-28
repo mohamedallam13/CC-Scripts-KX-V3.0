@@ -4,39 +4,39 @@
 
   const SOURCE_FILE_CONSTRUCTOR = {};
 
-  const MASTER_INDEX_FILE_ID = "18v8jqGGsu3PYmLWkFH0tFVSqhQzMJfsn"
+  const REFERENCES_MANAGER = CCLIBRARIES.REFERENCES_MANAGER;
+  const DIVIDED_SHEETS_MANAGER = CCLIBRARIES.DSMF;
+  const SHEETS_ARRAY = SHEET_PROPERTIES.SHEETS_ARRAY;
+  const SSID = SHEET_PROPERTIES.SSID;
+  const SHEET_OPTIONS_ARRAY = SHEET_PROPERTIES.SHEET_OPTIONS_ARRAY;
 
-  var sheetNames;
+  const REQUIRED_REFERENCES = ["sourcesIndexed"];
 
-  var masterIndex;
-  var sourceOriginalFile;
+  var referencesObj;
+  var fileObj = {};
 
-  function getSheetNames() {
-    sheetNames = ["CCMAIN", "CCG"]
-  }
 
   function createSourcesFile(isNewBool) {
-    var fileObj = {};
-    getSheetNames();
     getReferences();
-    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sheetNames.forEach(sheetName => {
-      sourcesSSObj.readSourcesSheet(sheetName);
-      var subTablesObj = sourcesSSObj.sheetsObject[sheetName].subTablesObj;
-      populateFileObj(fileObj, subTablesObj, isNewBool)
+    var sourcesSSObj = DIVIDED_SHEETS_MANAGER.init(SSID);
+    SHEETS_ARRAY.forEach(sheetName => { // SHEETS_ARRAY is the array brought in from the division properties file because this file is the main config for all divisions, so it is logical to have it as the source
+      var dividedSheetObj = sourcesSSObj.readDividedSheet({ sheetName: sheetName, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject[sheetName];
+      populateFileObj(fileObj, dividedSheetObj, isNewBool)
     })
-    Toolkit.writeToJSON(fileObj, masterIndex.sourcesIndexedFileId);
+    writeToSourcesFile();
   }
 
   function getReferences() {
-    masterIndex = masterIndex || Toolkit.readFromJSON(MASTER_INDEX_FILE_ID);
-    sourceOriginalFile = sourceOriginalFile || Toolkit.readFromJSON(masterIndex.sourcesIndexedFileId);
-
+    referencesObj = REFERENCES_MANAGER.defaultReferences.requireFiles(REQUIRED_REFERENCES).requiredFiles;
   }
 
-  function populateFileObj(fileObj, subTablesObj, isNewBool) {
-    var sourcesObjValues = subTablesObj.sources.objectifiedValues;
-    var maps = subTablesObj.maps.objectifiedValues;
+  function writeToSourcesFile() {
+    referencesObj.sourcesfilesindex.update();
+  }
+
+  function populateFileObj(fileObj, dividedSheetsObject, isNewBool) {
+    var sourcesObjValues = dividedSheetsObject.subTablesObj.sources.objectifiedValues;
+    var maps = dividedSheetsObject.subTablesObj.maps.objectifiedValues;
 
     sourcesObjValues.forEach((source, i) => {
       if (!source.include) {
@@ -62,14 +62,15 @@
   }
 
   function getOriginalSourcesArr(source, i) {
+    var sourceOriginalFile = referencesObj.sourcesIndexed.fileContent;
     if (!sourceOriginalFile[source.branch]) {
-      return;
+      fileObj[source.branch] = {};
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode]) {
-      return;
+      fileObj[source.branch][source.primaryClassifierCode] = [];
     }
     if (!sourceOriginalFile[source.branch][source.primaryClassifierCode][i]) {
-      return
+      return { counter: 0 }
     }
     return sourceOriginalFile[source.branch][source.primaryClassifierCode][i];
   }

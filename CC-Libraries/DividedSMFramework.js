@@ -5,13 +5,14 @@
   const DSMF = {}
 
   const DEFAULT_SSID = "";
-  const DEFAULT_DIVIDER = "";
+  const DEFAULT_DIVIDER = ""; // What Divides the tables (could be an emtpy cell, or any sort of divider like a cell including a certain value)
+  const DEFAULT_TYPE = ""; // I cant remember what the fuck that was even
 
   const DEFAULT_RANGES_OPTIONS_ARRAY = [
     {
       marker: "",
       tableLabel: "",
-      transpose: true,
+      transpose: true, // Should the table be transposed, so the headers are currently actually a column not a row
       type: ""
     }
   ]
@@ -25,7 +26,7 @@
       dividedSheetsObject: {},
       readDividedSheet: function (param) {
         var paramObj = new ParametersObj(Spreadsheet, param);
-        this.dividedSheetsObject[sheetName] = new DividedSheetObj(paramObj);
+        this.dividedSheetsObject[paramObj.sheetName] = new DividedSheetObj(paramObj);
         return this;
       }
     };
@@ -39,14 +40,18 @@
   }
   function ParametersObj(Spreadsheet, param) {
     this.sheetName = param.sheetName;
-    this.Sheet = Spreadsheet.getSheetByName(paramObj.sheetName);
+    this.Sheet = Spreadsheet.getSheetByName(param.sheetName);
     this.divider = param.divider || DEFAULT_DIVIDER;
     var rangesOptionsArray = param.rangesOptionsArray || DEFAULT_RANGES_OPTIONS_ARRAY;
-    this.sheetProps = new SheetProps(Sheet, rangesOptionsArray, divider);
-    this.rangesOptionsArray = rangesOptionsArray.map(rngParam => new RangeOptionsObj(rngParam, this.Sheet, this.sheetProps));
+    this.sheetProps = new SheetProps(this.Sheet, rangesOptionsArray, this.divider);
+    this.rangesOptionsArray = rangesOptionsArray.map((rngParam, i) => {
+      var tableObj = this.sheetProps.extractedTables[i];
+      return new RangeOptionsObj(rngParam, this.Sheet, tableObj);
+    })
   }
 
   function SheetProps(Sheet, rangesOptionsArray, divider) {
+    const self = this;
     this.dataRegionValues = Sheet.getDataRange().getValues();
     this.extractedTables = extractTables(this.dataRegionValues, rangesOptionsArray, divider);
   }
@@ -55,27 +60,29 @@
     var firstTableMarker = rangesOptionsArray[0].marker;
     var startCoord = getStartCoordinates(dataRegionValues, firstTableMarker);
     var iterationHeader = getIterationHeader(dataRegionValues, startCoord.rowIndex, startCoord.colIndex, divider);
-    var localStartColIndex = sheetProp.rowIndex;
+    var localStartColIndex = startCoord.colIndex;
     var extractedTables = [];
     iterationHeader.forEach((col, j) => {
       if (col != divider) {
         return
       }
-      var extractedTable = extractSubTable(dataRegionValues, localStartColIndex, startCoord.colIndex, j);
-      var extractedTableOptions = new TableOptionsObj(subTableArray, startCoordinates.rowIndex, startCoordinates.colIndex, j);
+      var extractedTable = extractSubTable(dataRegionValues, startCoord.rowIndex, localStartColIndex, j);
+      var extractedTableOptions = new TableOptionsObj(extractedTable, startCoord.rowIndex, startCoord.colIndex, j);
       extractedTables.push({ extractedTable: extractedTable, extractedTableOptions: extractedTableOptions });
-      startColIndex = j + 1;
+      localStartColIndex = j + 1;
     })
+    return extractedTables;
   }
 
   function getStartCoordinates(dataRegionValues, firstTableMarker, sheetProps) {
+    var startCoord = {};
     for (var i = 0; i < dataRegionValues.length; i++) {
       var row = dataRegionValues[i];
       var markerIndex = row.indexOf(firstTableMarker);
       if (markerIndex != -1) {
-        sheetProps.rowIndex = i;
-        sheetProps.colIndex = markerIndex;
-        return
+        startCoord.rowIndex = i;
+        startCoord.colIndex = markerIndex;
+        return startCoord;
       }
     }
   }
@@ -106,29 +113,19 @@
     this.lastCol = j;
   }
 
-  function RangeOptionsObj(rngParam, Sheet, sheetProps) {
+  function RangeOptionsObj(rngParam, Sheet, tableObj) {
     this.type = DEFAULT_TYPE;
-    var marker = rngParam.marker;
-    var tableObj = getTableFromExtracted(sheetProps, marker);
-    Object(this, rngParam);
+    Object.assign(this, tableObj.extractedTableOptions, rngParam);
+    var self = this;
     this.values = this.transpose ? transpose(tableObj.extractedTable) : tableObj.extractedTable;
     this.rows = this.lastRow - this.startRow + 1;
     this.cols = this.lastCol - this.startCol + 1;
     this.range = Sheet.getRange(this.startRow, this.startCol, this.rows, this.cols);
   }
-  function getTableFromExtracted(sheetProps, marker) {
-    for (let i; i < sheetProps.extractedTables.length; i++) {
-      var extractedTable = sheetProps.extractedTables[i].extractedTable;
-      var markerInSheet = extractedTable[0][0];
-      if (marker == markerInSheet) {
-        return sheetProps.extractedTables[i];
-      }
-    }
-  }
 
-  function DividedSheetObj(Sheet, paramObj) {
+  function DividedSheetObj(paramObj) {
     this.Sheet = paramObj.Sheet;
-    this.subTablesObj = getSubTableObj(Sheet, paramObj.rangesOptionsArray, paramObj.divider);
+    // this.subTablesObj = getSubTableObj(this.Sheet, paramObj.rangesOptionsArray, paramObj.divider);
     this.subTablesObj = {};
     paramObj.rangesOptionsArray.forEach(rangeOptions => {
       var tableLabel = rangeOptions.tableLabel || rangeOptions.marker
@@ -138,7 +135,7 @@
   }
 
   function SubTableObj(rangeOptions) {
-    var objValuesObj = objectifyValues(this.values, rangeOptions);
+    var objValuesObj = objectifyValues(rangeOptions);
     Object.assign(this, objValuesObj, rangeOptions);
   }
 
@@ -146,7 +143,8 @@
     return matrix[0].map((col, i) => matrix.map(row => row[i]));
   }
 
-  function objectifyValues(values, rangeOptions) {
+  function objectifyValues(rangeOptions) {
+    var values = rangeOptions.values;
     var objectifiedValues = [];
     var header = values[0];
     values = values.slice(1);
@@ -172,6 +170,22 @@
 })
 
 function testSheetReader() {
-  var reader = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj().readSourcesSheet("CCG").sheetsObject;
+  const SSID = "10X1A0sf3BDoqvlkNSSw3SViNkvrLwacZANyRvUA0ThY";
+  const SHEET_OPTIONS_ARRAY = [
+
+    {
+      marker: "#",
+      tableLabel: "sources",
+      type: ""
+    },
+    {
+      marker: "Base_Source",
+      tableLabel: "maps",
+      transpose: true,
+      type: ""
+    }
+
+  ]
+  var reader = DSMF.init(SSID).readDividedSheet({ sheetName: "CCG", rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject;
 }
 

@@ -4,74 +4,86 @@
 
   const SOURCES_MANAGER_OPTIONS = {};
 
-  var sheetNames;
+  const DIVIDED_SHEETS_MANAGER = CCLIBRARIES.DSMF;
+  const imp = CCLIBRARIES.imp;
 
-  function getSheetNames() {
-    sheetNames = ["CCMAIN", "CCG"]
-  }
+  const SHEETS_ARRAY = SHEET_PROPERTIES.SHEETS_ARRAY;
+  const SSID = SHEET_PROPERTIES.SSID;
+  const SHEET_OPTIONS_ARRAY = SHEET_PROPERTIES.SHEET_OPTIONS_ARRAY;
 
-  function getCurrentSheet() {
-    return SpreadsheetApp.getActiveSheet().getSheetName();
-  }
+  var sheetObj;
 
   function setMapsForAll() {
-    getSheetNames();
     var sourcesSSObj = DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    sheetNames.forEach(sheetName => {
+    SHEETS_ARRAY.forEach(sheetName => {
       setMapsPerActivity(sheetName, sourcesSSObj)
     })
   }
 
   function setMapsPerActivity(sheetName, sourcesSSObj) {
     sheetName = sheetName || getCurrentSheet();
-    sourcesSSObj = sourcesSSObj || DIVIDED_SHEETS_MANAGER.getSpreadSheetObj();
-    var subTablesObj = sourcesSSObj.readSourcesSheet(sheetName).sheetsObject[sheetName].subTablesObj;
-    var sources = subTablesObj.sources;
-    var maps = subTablesObj.maps;
-    var sheet = subTablesObj.Sheet;
+    sourcesSSObj = sourcesSSObj || DIVIDED_SHEETS_MANAGER.init(SSID);
+    var dividedSheetObj = sourcesSSObj.readDividedSheet({ sheetName: sheetName, rangesOptionsArray: SHEET_OPTIONS_ARRAY }).dividedSheetsObject[sheetName];
+    var sources = dividedSheetObj.subTablesObj.sources;
+    var maps = dividedSheetObj.subTablesObj.maps;
+    var sheet = dividedSheetObj.Sheet;
     var lastSource = sources.objectifiedValues[sources.objectifiedValues.length - 1];
     var lastMapEntry = maps.objectifiedValues[maps.objectifiedValues.length - 1];
     var diff = checkDifference(lastSource, lastMapEntry);
-    if (!diff) {
-      return;
+    if (diff > 0) {
+      addColumnsForMapTable(diff + 1, sheet, lastMapEntry);
     }
-    addColumnsForMapTable(diff, sheet, maps, lastMapEntry);
-    processNewEntries(sources, maps, sheet, lastMapEntry)
+    processAllEntries(sources, maps, sheet, maps.startCol);
   }
 
   function checkDifference(lastSource, lastMapEntry) {
     var lastSourceCount = parseInt(lastSource["#"]);
-    var lastEntryCount = parseInt(lastMapEntry["Base_Source"]);
-    var diff = lastEntryCount - lastSourceCount;
-    if (diff == 0) {
-      return;
-    }
+    var lastMapEntryCount = parseInt(lastMapEntry["Base_Source"]);
+    var diff = lastSourceCount - lastMapEntryCount;
     return diff;
   }
 
   function addColumnsForMapTable(diff, sheet, lastMapEntry) {
-    sheet.insertColumns(lastMapEntry.orderInSheet, diff);
+    sheet.insertColumns(lastMapEntry.orderInSheet + 1, diff);
   }
 
-  function processNewEntries(sources, maps, sheet, lastMapEntry) {
-    var unMappedSources = sources.objectifiedValues.slice(-diff);
-    for (let i = 0; i < unMappedSources.length; i++) {
-      var unMappedSourceObj = unMappedSources[i];
-      var sourceHeader = getHeaderArr(unMappedSourceObj);
+  function processAllEntries(sources, maps, sheet, mapsStartCol) {
+    var allSources = sources.objectifiedValues;
+    var allMaps = maps.objectifiedValues;
+    for (let i = 0; i < allSources.length; i++) {
+      var sourceObj = allSources[i];
+      var isInfoMissing = checkIfInfoIsMissing(sourceObj);
+      if (isInfoMissing || sourceObj.activated == "YES") {
+        // if already activated or info is missing, quit
+        continue;
+      }
+      var sourceHeader = getHeaderArr(sourceObj);
       var mapsRow = maps.startRow;
-      var mapsCol = lastMapEntry + i + 1;
-      var mapsRows = maps.lastRow - maps.startRow + 1
-      Toolkit.setValidationList(sheet, sourceHeader, mapsRow, mapsCol, mapsRows, 1);
-      if (unMappedSourceObj.autoActivate != "YES") {
+      var mapsCol = mapsStartCol + i;
+      var mapsRows = maps.lastRow - maps.startRow
+      setValidationList(sheet, sourceHeader, mapsRow + 1, mapsCol + 1, mapsRows, 1);
+      setNewMapOrder(sheet, mapsRow, mapsCol + 1, sourceObj["#"]);
+      if (!sourceObj.autoActivate) {
         continue;
       }
-      addLastMap(lastMapEntry, sheet, mapsRow, mapsCol);
-      setSourceTableValue(sheet, sources, unMappedSource, "activated", "YES");
-      if (unMappedSourceObj.autoInclude != "YES") {
+      var lastFilledMap = getLastFilledMap(allMaps);
+      if(!lastFilledMap){
         continue;
       }
-      setSourceTableValue(sheet, sources, unMappedSource, "include", true);
+      addLastMap(lastFilledMap, sourceObj, sheet, mapsRow, mapsCol + 1);
+      setSourceTableValue(sheet, sources, sourceObj, "activated", "YES");
+      if (sourceObj.autoInclude != "YES") {
+        continue;
+      }
+      setSourceTableValue(sheet, sources, sourceObj, "include", true);
     }
+  }
+
+  function checkIfInfoIsMissing(sourceObj) {
+    if (sourceObj.secondaryClassifierName == "" || sourceObj.secondaryClassifierName == "" || sourceObj.ssid == "" || sourceObj.headerRow == "") {
+      return true;
+    }
+    return;
   }
 
   function getHeaderArr(unMappedSourceObj) {
@@ -79,22 +91,54 @@
       headerRow: unMappedSourceObj.headerRow,
       skipRows: unMappedSourceObj.skipRows
     }
-    var impObj = imp.createSpreadsheetManager(unMappedSourceObj.ssid);
-    var sheetObj = impObj.addSheets(unMappedSourceObj.sheetName).parseSheet(parseObj);
+    getSheetData(unMappedSourceObj, parseObj);
     var header = sheetObj.header;
-    sourceHeader.unshift(unMappedSourceObj["#"]);
     return header
   }
 
-  function addLastMap(lastMapEntry, sheet, row, col) {
-    var keys = Object.keys(lastMapEntry);
-    var writeCol = keys.map(key => [lastMapEntry[key]]);
+  function getSheetData(unMappedSourceObj, parseObj) {
+    var ssid = unMappedSourceObj.ssid;
+    var sheetName = unMappedSourceObj.sheetName;
+    var impObj = imp.createSpreadsheetManager(ssid);
+    sheetObj = impObj.addSheets([sheetName]).sheets[sheetName].parseSheet(parseObj);
+    sheetObj.objectifyValues();
+  }
+
+  function setValidationList(sheet, list, row, col, rows, cols) {
+    var rule = SpreadsheetApp.newDataValidation().requireValueInList(list).build();
+    if (rows && cols) {
+      var range = sheet.getRange(row, col, rows, cols);
+    } else {
+      var range = sheet.getRange(row, col);
+    }
+    range.setDataValidation(rule);
+  }
+
+  function setNewMapOrder(sheet, mapsRow, mapsCol, sourceOrder) {
+    sheet.getRange(mapsRow, mapsCol).setValue(sourceOrder);
+  }
+
+  function getLastFilledMap(allMaps) {
+    for (let i = allMaps.length - 1; i >= 0; i--) {
+      var currentMap = allMaps[i];
+      if(currentMap[0] != ""){
+        return currentMap;
+      }
+    }
+  }
+
+  function addLastMap(lastFilledMap, sourceObj, sheet, row, col) {
+    lastFilledMap["Base_Source"] = sourceObj["#"];
+    var keys = Object.keys(lastFilledMap);
+    keys.pop() // remove the last key which is row in sheet, without having to delete it from the object and affecting important operations perhaps that would require it
+    var writeCol = keys.map(key => [lastFilledMap[key]]);
     sheet.getRange(row, col, writeCol.length, writeCol[0].length).setValues(writeCol);
+    SpreadsheetApp.flush();
   }
 
   function setSourceTableValue(sheet, sources, targetSourceObj, columnHeader, value) {
     var sourceRow = targetSourceObj.orderInSheet;
-    var colIndex = header.indexOf(columnHeader);
+    var colIndex = sources.header.indexOf(columnHeader);
     var sourceCol = sources.startCol + colIndex;
     sheet.getRange(sourceRow, sourceCol).setValue(value);
   }
@@ -108,6 +152,26 @@
 
 function runAutoAddSource(param) {
   SOURCE_INFO_MANAGER.addNewSource(param);
-  SOURCES_MANAGER_OPTIONS.setMapsPerActivity(param.activity);
+  SOURCES_MANAGER_OPTIONS.setMapsPerActivity(param.primaryClassifierCode);
   SOURCE_FILE_CONSTRUCTOR.createSourcesFile();
+}
+
+function testAutoRun() {
+  const param = {
+    formResponsesOptions: {
+      URL: "https://docs.google.com/spreadsheets/d/1zw7fnNh1zHWPXyn4BIB5jFCWh8sv-mtbUwebZOFCq_o/edit?usp=drive_web&ouid=101626450118027500527",
+      ssid: "1zw7fnNh1zHWPXyn4BIB5jFCWh8sv-mtbUwebZOFCq_o"
+    },
+    primaryClassifierName: "CC Gatherings",
+    primaryClassifierCode: "CCG",
+    secondaryClassifierName: "Season VIII Round 1",
+    secondaryClassifierCode: "SVIIIR1",
+    branch: "Events",
+    sourceType: "GSheet",
+    autoActions: {
+      accepting: true,
+      autoActivate: true
+    }
+  }
+  runAutoAddSource(param)
 }
