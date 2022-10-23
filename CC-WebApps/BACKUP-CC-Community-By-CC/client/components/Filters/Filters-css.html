@@ -1,0 +1,44 @@
+<style>
+    .filters-collapsible {
+        background-color: #fff;
+        color: #111;
+        margin: 1rem 0;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .filters-header {
+        display: flex;
+        margin-left: 5px;
+        justify-content: space-between;
+        background-color: whitesmoke;
+        cursor: pointer;
+        font-size: x-large;
+        position: relative;
+    }
+
+    .filters-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+    }
+
+    .filters-body-content {
+        padding: 1rem;
+        line-height: 1.5rem;
+        border-top: 1px solid;
+        border-image: linear-gradient(to right, transparent, #34495e, transparent) 1;
+    }
+
+    .filters-header-content::after {
+        content: "\25BA";
+        font-size: 1rem;
+        position: absolute;
+        right: 1rem;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .filters-header.active .filters-header-content::after {
+        transform: rotate(90deg);
+    }
+</style>

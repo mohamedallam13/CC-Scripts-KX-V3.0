@@ -1,0 +1,27 @@
+<? const Loader = "client/components/Loader/Loader" ?>
+
+<div class="prerendrs">
+    <div class="prerender-loader">
+        <?!= inc(Loader) ?>
+    </div>
+    <div class="prerendered-container">
+    </div>
+</div>
+
+<script>
+    const pathForPrerender = <?= path ?>;
+    window.onload = load;
+    function load() {
+        loaderOn()
+        google.script.run
+            .withSuccessHandler(setHTML)
+            .loadPrerender(pathForPrerender)
+    }
+
+    function setHTML(HTMLContent) {
+        $('.prerendered-container').html(HTMLContent)
+        loaderOff()
+    }
+
+
+</script>

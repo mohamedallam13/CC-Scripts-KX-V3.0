@@ -1,0 +1,12 @@
+<script>
+    const filtersHeader = document.querySelector(".filters-header");
+    filtersHeader.addEventListener('click', event => {
+        filtersHeader.classList.toggle('active')
+        const filtersBody = filtersHeader.nextElementSibling;
+        if (filtersHeader.classList.contains("active")) {
+            filtersBody.style.maxHeight = filtersBody.scrollHeight + "px";
+        } else {
+            filtersBody.style.maxHeight = 0;
+        }
+    })
+</script>

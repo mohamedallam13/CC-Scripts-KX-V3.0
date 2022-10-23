@@ -1,0 +1,97 @@
+<? const CollapsibleHeaderCSS = "client/components/Collapsible/Collapsible-Header-css" ?>
+<? const defaultPicture = HELPERS.getGDriveImgByLink("https://drive.google.com/file/d/1XEzG9zVw46R9JwXXYqeyjdVbxlMLN5cb/view?usp=sharing") ?>
+<? const cakeIcon = "client/icons/cake" ?>
+<? const phoneIcon = "client/icons/phone" ?>
+<? const emailIcon = "client/icons/email" ?>
+<? const whatsappIcon = "client/icons/whatsappIcon" ?>
+<? const facebookIcon = "client/icons/facebookIcon" ?>
+
+<?!= _I(CollapsibleHeaderCSS) ?>
+<div class="head-info">
+    <div class="application-picture">
+        <? if(profilePic.value != ""){ ?>
+        <img src=<?=HELPERS.getGDriveImgById(profilePic.value) ?> >
+        <? }else{ ?>
+        <img src=<?=defaultPicture ?> >
+        <? } ?>
+    </div>
+    <div class="head-details-section">
+        <div class="fullname-header">
+            <h1>
+                <?= name.value ?>
+            </h1>
+        </div>
+        <div class="info-table">
+            <div class="info-section-column">
+                <div class="header-row">
+                    <div class="header-icon">
+
+                        <?!= _I(cakeIcon) ?>
+
+                    </div>
+                    <div class="header-info-item">
+
+                        <?= age.value ?>
+
+                    </div>
+                </div>
+                <div class="header-row">
+                    <div class="header-icon">
+
+                        <?!= _I(phoneIcon) ?>
+
+                    </div>
+                    <div class="header-info-item">
+
+                        <?= phone.value ?>
+
+                    </div>
+                </div>
+                <div class="header-row">
+                    <div class="header-icon">
+
+                        <?!= _I(facebookIcon) ?>
+
+                    </div>
+                    <div class="header-info-item">
+
+                        <a href="<?= facebook.link ?>" target="_blank">
+                            <?= facebook.value ?>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+            <div class="info-section-column">
+                <div class="header-row">
+                    <div class="header-icon">
+
+                        <?!= _I(emailIcon) ?>
+
+                    </div>
+                    <div class="header-info-item">
+
+                        <a href="<?= HELPERS.getEmailLink(email.value) ?>" target="_blank">
+                            <?= email.value ?>
+                        </a>
+
+                    </div>
+                </div>
+                <div class="header-row">
+                    <div class="header-icon">
+
+                        <?!= _I(whatsappIcon) ?>
+
+                    </div>
+                    <div class="header-info-item">
+
+                        <a href="<?= HELPERS.getWhatsappLink(whatsapp.value) ?>" target="_blank">
+                            <?= whatsapp.value ?>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

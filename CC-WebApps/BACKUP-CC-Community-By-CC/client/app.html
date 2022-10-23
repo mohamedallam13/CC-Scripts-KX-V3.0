@@ -1,0 +1,71 @@
+<? const Loader = "client/components/Loader/Loader" ?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <title>Community by CC</title>
+</head>
+
+<body>
+  <div class="App">
+    <div class="app-loader">
+      <?!= _I(Loader) ?>
+    </div>
+    <div class="app-container">
+    </div>
+  </div>
+
+</body>
+
+<script>
+  const fetchPage = function () {
+        loaderOn()
+        const user = "" //getUserFromCookie();
+        const session = { user }
+        const params = { session }
+        const path = <?= path.replace("base/", "") ?>;
+        let query = <?= query ?>;
+        console.log(path, JSON.stringify(query));
+            google.script.run
+                .withSuccessHandler(setAppPageContent)
+                .withFailureHandler(setAppPageContentNotFound)
+                .routeString({ pathInfo: path, paramters: query = {}, postData: JSON.stringify({ content: { session } }) })
+    }
+
+    const setAppPageContent = function (HTMLContent) {
+        $('.app-container').html(HTMLContent);
+        loaderOff()
+    }
+
+    const setAppPageContentNotFound = function () {
+        $('.app-container').html('<h1>PAGE NOT FOUND!</h1>');
+        loaderOff()
+    }
+
+    // const getUserFromCookie = function () {
+    //     const cookie = getCookie()
+    // }
+
+    // function link(path) {
+    //     //Add to google history
+    //     window.location.replace(path)
+    // }
+
+    // function redirect(path) {
+    //     window.location.replace(path)
+
+    // }
+
+    window.onload = fetchPage
+</script>
+
+</html>

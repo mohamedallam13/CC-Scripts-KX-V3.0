@@ -1,0 +1,14 @@
+<? const indexCSS = 'client/index-css' ?>
+<? const Navbar = 'client/components/Navbar/Navbar' ?>
+
+
+<?!= _I(indexCSS) ?>
+
+<div class="index">
+    <?!= _I(Navbar) ?>
+    <? if(prerendered){ ?>
+    <?!= _I("prerenders", props) ?>
+    <? }else{ ?>
+    <?!= _I(routedPage, props) ?>
+    <? } ?>
+</div>

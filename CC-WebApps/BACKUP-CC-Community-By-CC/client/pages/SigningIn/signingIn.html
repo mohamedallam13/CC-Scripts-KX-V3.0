@@ -1,0 +1,18 @@
+<div class="continous-loader">
+    <?!= _I(Loader) ?>
+</div>
+
+<script>
+    const user = <?= user ?>;
+
+    function signIn() {
+        if (!user) {
+            console.log("error siging in")
+            return
+        }
+        setCookie(user);
+        redirect("app/home")
+    }
+
+    window.onload = signIn;
+</script>

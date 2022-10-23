@@ -1,0 +1,13 @@
+{
+    "scriptId": "1KhkjtkP7ycsGzGgz_FPS7XAQmX9cD-GkgJDfL2kWxqhGzJTBSvQuswnk",
+    "filePushOrder": [
+
+        "server/ENV.js",
+        "server/Helpers.js",
+        "server/Prerender.js",
+        "server/Middleware.js",
+        "server/Controller.js",
+        "server/Router.js",
+        "server/Server.js"
+    ]
+}

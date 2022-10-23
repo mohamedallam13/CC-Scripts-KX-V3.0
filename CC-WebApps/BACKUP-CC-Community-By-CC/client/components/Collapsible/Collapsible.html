@@ -1,0 +1,36 @@
+<? const CollapsibleCSS = "client/components/Collapsible/Collapsible-css" ?>
+<? const CollapsibleHeader = "client/components/Collapsible/Collapsible-Header"?>
+<? const CollapsibleBody = "client/components/Collapsible/Collapsible-Body"?>
+<? const thumbsUp = "client/icons/hand-thumb-up" ?>
+<? const thumbsDown = "client/icons/hand-thumb-down" ?>
+<? const minusCircle = "client/icons/minus-circle" ?>
+
+<?!=_I(CollapsibleCSS) ?>
+<div class="collapsible">
+    <div class="collapsible-item">
+        <div class="collapsible-item-header">
+            <div class="check-box-section">
+                <input type="checkbox" class="select-row">
+            </div>
+            <div class="collapsible-item-header-content">
+                <?!= _I(CollapsibleHeader, headerSection) ?>
+            </div>
+            <div class="decision-section">
+                <div class="decision-button d-b-accept">
+                    <?!= _I(thumbsUp) ?>
+                </div>
+                <div class="decision-button d-b-defer">
+                    <?!= _I(minusCircle) ?>
+                </div>
+                <div class="decision-button d-b-reject">
+                    <?!= _I(thumbsDown) ?>
+                </div>
+            </div>
+        </div>
+        <div class="collapsible-item-body">
+            <div class="collapsible-item-body-content">
+                <?!= _I(CollapsibleBody, {detailsSection, comments}) ?>
+            </div>
+        </div>
+    </div>
+</div>

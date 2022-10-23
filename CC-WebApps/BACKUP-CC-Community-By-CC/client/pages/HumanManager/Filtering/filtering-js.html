@@ -1,0 +1,14 @@
+<script>
+    const collapsiblesHeaders = document.querySelectorAll(".collapsible-item-header-content");
+    collapsiblesHeaders.forEach(collapsiblesHeader => {
+        collapsiblesHeader.addEventListener('click', event => {
+            collapsiblesHeader.classList.toggle('active')
+            const collapsiblesBody = collapsiblesHeader.parentElement.nextElementSibling;
+            if (collapsiblesHeader.classList.contains("active")) {
+                collapsiblesBody.style.maxHeight = collapsiblesBody.scrollHeight + "px";
+            } else {
+                collapsiblesBody.style.maxHeight = 0;
+            }
+        })
+    })
+</script>

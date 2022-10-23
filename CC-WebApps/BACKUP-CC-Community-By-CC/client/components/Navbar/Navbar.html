@@ -1,0 +1,42 @@
+<? const NavbarCSS = "client/components/Navbar/Navbar-css" ?>
+<? const NavbarJS = "client/components/Navbar/Navbar-js" ?>
+<? Bell = "client/icons/bell" ?>
+<? Messaging = "client/icons/messaging" ?>
+<? Gear = "client/icons/gear" ?>
+<? Search = "client/icons/search" ?>
+<? Logo = HELPERS.getGDriveImgByLink("https://drive.google.com/file/d/1IWjr_BT9AHYKtohthre-lM-MmM3PzUhD/view?usp=sharing") ?>
+
+<?!= _I(NavbarCSS) ?>
+<div class="navbar">
+    <div class="logo">
+        <img src=<?=Logo ?> >
+    </div>
+    <div class="wrapper">
+        <div class="search">
+            <input type="text" placeholder="Search..." class="">
+            <div class="searchIcon">
+                <?!= _I(Search) ?>
+            </div>
+        </div>
+        <div class="items">
+            <!-- Make a loop here -->
+            <div class="item">
+                <div class="bell-icon">
+                    <?!= _I(Bell) ?>
+                </div>
+                <div class="counter active">1</div>
+            </div>
+            <div class="item">
+                <div class="messaging-icon">
+                    <?!= _I(Messaging) ?>
+                </div>
+                <div class="counter active">1</div>
+            </div>
+            <div class="item">
+                <div class="gear-icon">
+                    <?!= _I(Gear) ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

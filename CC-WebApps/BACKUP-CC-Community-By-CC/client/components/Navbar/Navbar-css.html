@@ -1,0 +1,72 @@
+<style>
+    .navbar {
+        height: 50px;
+        border-bottom: 0.5px solid darkgrey;
+        display: flex;
+        background-color:#303642 ;
+    }
+
+    .navbar img {
+        max-height: 100%;
+        width: auto;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+    }
+
+    .wrapper {
+        width: 100%;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+    }
+
+    .navbar .items {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+
+    .navbar .item {
+        padding: 5px;
+        position: relative;
+    }
+
+    .search {
+        display: flex;
+        align-items: center;
+        border: 0.5px solid darkgrey;
+        padding: 3px;
+    }
+
+    .seach input {
+        border: none;
+        outline: none;
+    }
+
+    /* TODO: Requires further adjustment to place in the middle */
+    .navbar .counter {
+        width: 15px;
+        height: 15px;
+        display: flex;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+        position: absolute;
+        top: -2px;
+        right: -1px;
+    }
+
+    .navbar .item .active {
+        background-color: red;
+        border-radius: 50%;
+        color: white;
+    }
+</style>

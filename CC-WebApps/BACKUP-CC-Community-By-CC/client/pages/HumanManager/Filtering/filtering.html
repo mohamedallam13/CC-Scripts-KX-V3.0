@@ -1,0 +1,20 @@
+<? const FilteringCSS = "client/pages/HumanManager/Filtering/filtering-css"?>
+<? const Collapsible = "client/components/Collapsible/Collapsible"?>
+<? const Filters = "client/components/Filters/Filters"?>
+<? const Tabs = "client/components/Tabs/Tabs"?>
+<? const FilteringJS = "client/pages/HumanManager/Filtering/filtering-js"?>
+
+<?!= _I(FilteringCSS) ?>
+
+<div class="stages">
+    <?!= _I(Tabs,{stages}) ?>
+</div>
+<div class="filters">
+    <?!= _I(Filters) ?>
+</div>
+<div class="collapsibles">
+    <? entriesArray.forEach(function(entry){?>
+        <?!= _I(Collapsible, entry) ?>
+    <? }) ?>
+</div>
+<?!= _I(FilteringJS) ?>

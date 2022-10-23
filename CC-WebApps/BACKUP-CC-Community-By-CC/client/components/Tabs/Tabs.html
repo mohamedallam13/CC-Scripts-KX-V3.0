@@ -1,0 +1,9 @@
+<? const TabsCSS = "client/components/Tabs/Tabs-css" ?>
+
+<?!= _I(TabsCSS) ?>
+
+<div class="tabs">
+    <? stages.forEach(stage=>{ ?>
+    <div class="stage-tab"><?= stage ?></div>
+    <? }) ?>
+</div>
